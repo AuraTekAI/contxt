@@ -1,0 +1,171 @@
+# push_email_gui.py Module Documentation
+
+## Overview
+This module automates the process of replying to emails on the Corrlinks platform based on SMS messages stored in a database. It uses PyAutoGUI for browser automation and interacts with a SQL database to process and update message statuses.
+
+## Detailed Process Flow
+
+1. **Initialization**
+   - The script sets up logging to track its operations.
+   - It imports necessary modules and configuration variables.
+
+2. **Main Function: process_emails()**
+   This function orchestrates the entire email processing workflow.
+
+3. **Browser Initialization**
+   - Calls `open_firefox()` to launch the Firefox browser.
+   - This likely involves using PyAutoGUI to simulate keyboard/mouse actions to open Firefox.
+
+4. **Corrlinks Login**
+   - Calls `login_to_corrlinks()` to navigate to the Corrlinks login page and authenticate.
+   - If login fails, the process logs an error and terminates.
+
+5. **Database Connection**
+   - Establishes a connection to the SQL database using credentials from the configuration.
+   - If connection fails, the process logs an error and terminates.
+
+6. **Fetching Unprocessed SMS Messages**
+   - Executes a SQL query to retrieve all SMS messages with Processed = 'N' from the SMS table.
+   - Fetches SMSID, Message content, and associated EmailID for each unprocessed SMS.
+
+7. **Processing Loop**
+   For each unprocessed SMS message:
+
+   a. **Retrieve Email Message ID**
+      - Queries the Emails table to get the corresponding MessageID using the EmailID from the SMS.
+      - If no matching email is found, logs an error and continues to the next SMS.
+
+   b. **Construct Reply URL**
+      - Uses the MessageID to create a unique reply URL for each message.
+
+   c. **Navigate to Reply Page**
+      - Calls `navigate_to_reply(url)` to direct the browser to the specific reply page.
+      - This function uses PyAutoGUI to interact with the browser's address bar.
+
+   d. **Send Reply**
+      - Calls `send_reply(message)` to input the reply text and submit the message.
+      - This likely involves PyAutoGUI simulating typing and button clicks.
+
+   e. **Verify Message Sent**
+      - Calls `verify_message_sent()` to confirm the message was sent successfully.
+      - This probably checks for a specific confirmation URL or page element.
+
+   f. **Update Database**
+      - If the message is verified as sent, updates the SMS record in the database to Processed = 'Y'.
+      - Commits the database transaction.
+
+   g. **Logging**
+      - Logs the outcome of each message processing attempt, whether successful or not.
+
+8. **Error Handling**
+   - The main processing loop is wrapped in a try-except block to catch and log any unexpected errors.
+   - Specific error handling is implemented for database operations and message sending processes.
+
+9. **Resource Cleanup**
+   - Regardless of success or failure, the script ensures that:
+     - The database connection is properly closed.
+     - The browser is closed using the `close_browser()` function.
+
+## Key Functions
+
+- `open_firefox()`: Launches the Firefox browser.
+- `login_to_corrlinks()`: Automates the login process to Corrlinks.
+- `navigate_to_reply(url)`: Navigates to a specific reply URL in the browser.
+- `send_reply(message)`: Inputs and sends a reply message on the Corrlinks platform.
+- `verify_message_sent()`: Checks if a message was successfully sent.
+- `close_browser()`: Closes the Firefox browser.
+
+## Database Interactions
+- Connects to a SQL database (likely SQL Server based on the connection string).
+- Reads from the SMS and Emails tables.
+- Updates the Processed status in the SMS table.
+
+## Dependencies
+- PyAutoGUI: For browser and GUI automation.
+- pyodbc: For database connections (implied from the use of SQL Server).
+- logging: For logging operations and errors.
+- time: For introducing delays in automation steps.
+- pyperclip: For clipboard operations (if used in URL checks).
+
+## Configuration
+- Relies on external configuration (likely in variables.py) for database credentials, URLs, and other settings.
+
+## Error Handling and Logging
+- Implements comprehensive logging throughout the process.
+- Catches and logs exceptions at various levels of the operation.
+
+## Execution
+- Can be run as a standalone script or imported and called from another module.
+- The `main()` function serves as the entry point when run as a script.
+
+## Security Considerations
+- Handles sensitive information like database credentials and login details.
+- Care should be taken to secure the configuration file and any logs generated.
+
+## Performance Considerations
+- Processing time can vary based on the number of unprocessed messages and network/system performance.
+- Includes sleep timers to account for page load times and to prevent overwhelming the Corrlinks system.
+
+## Maintenance and Scalability
+- May require adjustments to timing and selectors if the Corrlinks website interface changes.
+- Consider implementing a limit on the number of messages processed in a single run for very large backlogs.
+
+# SMS-Reciever-API module documentation
+
+1. ConTXTContext.fs:
+   - Defines the data model (Sms) and database context (ConTXTContext)
+   - Sms class: Represents the structure of an SMS message in the database
+   - ConTXTContext class: Inherits from DbContext and sets up the connection to the database
+   - OnModelCreating: Configures the "SMS" table in the database
+
+2. Program.fs:
+   - Entry point of the application
+   - Sets up the web application builder
+   - Configures services:
+     - Adds controllers for handling HTTP requests
+     - Sets up the database context with SQL Server
+   - Builds the application
+   - Configures the HTTP request pipeline:
+     - Enables HTTPS redirection
+     - Sets up authorization
+     - Maps controller routes
+   - Runs the application
+
+3. SmsController.fs:
+   - Defines the API endpoint for receiving SMS messages
+   - ReceiveSms method:
+     - Accepts POST requests with SmsPayload
+     - Creates a new Sms object
+     - Adds it to the database
+     - Saves changes asynchronously
+     - Returns a success message
+   - SmsPayload record: Defines the structure of incoming SMS data
+
+4. launchSettings.json:
+   - Configures various launch profiles for the application
+   - Defines settings for running the app using:
+     - HTTP
+     - HTTPS
+     - IIS Express
+   - Sets environment variables and URLs for each profile
+
+5. SMS-Receiver-API.fsproj:
+   - Project file that defines the structure and dependencies of your application
+   - Specifies the target framework (.NET 8.0)
+   - Lists the F# source files to compile
+   - Includes NuGet package references:
+     - ASP.NET Core OpenAPI
+     - Entity Framework Core SQL Server
+     - Swashbuckle (for Swagger/OpenAPI support)
+
+6. appsettings.json:
+   - Configuration file for the application
+   - Stores key-value pairs for various application settings
+   - Includes:
+     - ConnectionStrings: Database connection details
+     - Logging: Configuration for logging levels and providers
+     - AllowedHosts: Specifies which hosts the app responds to
+   - Used by the application to retrieve settings at runtime
+   - Can be overridden by environment-specific versions (e.g., appsettings.Development.json)
+   - Accessed in code via IConfiguration interface, injected by the dependency injection system
+   - Allows for configuration changes without code modifications

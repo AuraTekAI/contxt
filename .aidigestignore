@@ -1,0 +1,12 @@
+# npx ai-digest -i "G:\Other computers\ConTXTs\ConTXT" -o "G:\Other computers\ConTXTs\ConTXT\project_summary.md"  --whitespace-removal --show-output-files
+SMSReceiverAPI/
+APISourceCode/
+__pycache__/
+.vs/
+Documentation/
+desktop.ini
+.gitattributes
+.gitignore
+.aidigestignore
+README.md
+*.html
