@@ -45,29 +45,21 @@ Date/Timestamp:         | Contact: | Msg Preview:                               
 +---------------------------------------------------------------------------------------------------------------+
 
 -------------------------------
-Username: This sets your username inside ConTXTs system for messaging P2P (prisoner to prisoner)
+Username: This sets your username inside ConTXTs system for messaging P2P (prisoner to prisoner) and private mode (not listed)
 
-Subject = UserName
+Subject = UserName ZachAttack
 
 Body =
-UserName: SomeUserName
-Age: How old are you? 
-Sex: M or F
-Private Mode: Y or N (This would be if you want to be listed in the user list.)
 
+Subject = Private (This would be if you don't want to be listed in the user list.)
+
+Body =
 -------------------------------
 Contacts: This is for setting your contact list.
 
-Subject = Contact
+Subject = Contact JohnD 123-456-7890 johndoe@example.com
 
 Body =
-ContactName: JohnD
-Ph#: 123-456-7890
-Email: johndoe@example.com
-
-ContactName: JaneD
-Ph#: 987-654-3210
-Email: janesmith@example.com
 
 -------------------------------
 Texting: This is how to send a text (SMS) message to someone on your contact list.
@@ -77,6 +69,3 @@ Subject = Text "Contact" (This is pulled from the users contact list)
 Body = Anything written here is forwarded on to the contact listed above in the subject.
 
 -------------------------------
-I am needing to build out a project plan for ConTXTs so when I hire a developer to build the remaining modules they have clear direction on how it needs to be built.
-
-I figured the rules from the inmate's standpoint would be a good starting point. Here is what I have so far.

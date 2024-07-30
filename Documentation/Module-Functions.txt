@@ -1,171 +1,343 @@
-# push_email_gui.py Module Documentation
+# Module Functions Documentation
 
-## Overview
-This module automates the process of replying to emails on the Corrlinks platform based on SMS messages stored in a database. It uses PyAutoGUI for browser automation and interacts with a SQL database to process and update message statuses.
+## push_email.py
 
-## Detailed Process Flow
+1. `capture_session_state(session)`
+   - Captures the current state of the session, including headers and dynamic cookies.
+   - Parameters: session (requests.Session)
+   - Returns: dict containing the captured session state
 
-1. **Initialization**
-   - The script sets up logging to track its operations.
-   - It imports necessary modules and configuration variables.
+2. `update_session_state(session, state)`
+   - Updates the session with the captured state.
+   - Parameters:
+     - session (requests.Session): The session object to update
+     - state (dict): The state to apply to the session
 
-2. **Main Function: process_emails()**
-   This function orchestrates the entire email processing workflow.
+3. `log_response_info(response)`
+   - Logs detailed information about an HTTP response.
+   - Parameters: response (requests.Response)
 
-3. **Browser Initialization**
-   - Calls `open_firefox()` to launch the Firefox browser.
-   - This likely involves using PyAutoGUI to simulate keyboard/mouse actions to open Firefox.
+4. `send_email_reply(session, form_data, message_content, message_id, session_state)`
+   - Sends an email reply through the Corrlinks system.
+   - Parameters:
+     - session (requests.Session)
+     - form_data (dict): Form data extracted from the reply page
+     - message_content (str): Content of the reply message
+     - message_id (str): ID of the message being replied to
+     - session_state (dict): Current state of the session
+   - Returns: bool indicating success or failure
 
-4. **Corrlinks Login**
-   - Calls `login_to_corrlinks()` to navigate to the Corrlinks login page and authenticate.
-   - If login fails, the process logs an error and terminates.
+5. `navigate_to_reply_page(session, message_id)`
+   - Navigates to the reply page for a specific message.
+   - Parameters:
+     - session (requests.Session)
+     - message_id (str)
+   - Returns: tuple (response, form_data)
 
-5. **Database Connection**
-   - Establishes a connection to the SQL database using credentials from the configuration.
-   - If connection fails, the process logs an error and terminates.
+6. `extract_form_data(html)`
+   - Extracts form data from an HTML page.
+   - Parameters: html (str)
+   - Returns: dict of form field names and values
 
-6. **Fetching Unprocessed SMS Messages**
-   - Executes a SQL query to retrieve all SMS messages with Processed = 'N' from the SMS table.
-   - Fetches SMSID, Message content, and associated EmailID for each unprocessed SMS.
+7. `run_data_logger_push_email()`
+   - Runs the data logger push email process.
+   - Returns: str indicating the result of the process
 
-7. **Processing Loop**
-   For each unprocessed SMS message:
+## db_ops.py
 
-   a. **Retrieve Email Message ID**
-      - Queries the Emails table to get the corresponding MessageID using the EmailID from the SMS.
-      - If no matching email is found, logs an error and continues to the next SMS.
+1. `set_email_callback(callback)`
+   - Sets the email callback function.
+   - Parameters: callback (function)
 
-   b. **Construct Reply URL**
-      - Uses the MessageID to create a unique reply URL for each message.
+2. `get_database_connection()`
+   - Attempts to establish a database connection using the configuration.
+   - Returns: tuple (connection, cursor)
 
-   c. **Navigate to Reply Page**
-      - Calls `navigate_to_reply(url)` to direct the browser to the specific reply page.
-      - This function uses PyAutoGUI to interact with the browser's address bar.
+3. `check_connection(cursor)`
+   - Tests the given database cursor by attempting to fetch a simple query.
+   - Parameters: cursor (pyodbc.Cursor)
+   - Returns: bool
 
-   d. **Send Reply**
-      - Calls `send_reply(message)` to input the reply text and submit the message.
-      - This likely involves PyAutoGUI simulating typing and button clicks.
+4. `close_database_resources(db_connection, cursor)`
+   - Properly closes the database resources.
+   - Parameters:
+     - db_connection (pyodbc.Connection)
+     - cursor (pyodbc.Cursor)
 
-   e. **Verify Message Sent**
-      - Calls `verify_message_sent()` to confirm the message was sent successfully.
-      - This probably checks for a specific confirmation URL or page element.
+5. `save_emails(emails, connection, cursor)`
+   - Saves a batch of emails to the database, including their message IDs.
+   - Parameters:
+     - emails (list): List of dictionaries containing email data
+     - connection (pyodbc.Connection)
+     - cursor (pyodbc.Cursor)
 
-   f. **Update Database**
-      - If the message is verified as sent, updates the SMS record in the database to Processed = 'Y'.
-      - Commits the database transaction.
+6. `ensure_user_exists(connection, cursor, user_name_id)`
+   - Ensures that a user exists in the database; adds the user if not present.
+   - Parameters:
+     - connection (pyodbc.Connection)
+     - cursor (pyodbc.Cursor)
+     - user_name_id (str): String containing the user's name and ID
+   - Returns: str (user ID) or None
 
-   g. **Logging**
-      - Logs the outcome of each message processing attempt, whether successful or not.
+7. `save_contact_details(contact_name, phone, email, cursor)`
+   - Saves the contact details into the Contacts table.
+   - Parameters:
+     - contact_name (str)
+     - phone (str, optional)
+     - email (str, optional)
+     - cursor (pyodbc.Cursor)
 
-8. **Error Handling**
-   - The main processing loop is wrapped in a try-except block to catch and log any unexpected errors.
-   - Specific error handling is implemented for database operations and message sending processes.
+8. `check_user_active(full_name)`
+   - Checks if a user is active in the database.
+   - Parameters: full_name (str)
+   - Returns: bool
 
-9. **Resource Cleanup**
-   - Regardless of success or failure, the script ensures that:
-     - The database connection is properly closed.
-     - The browser is closed using the `close_browser()` function.
+9. `update_user_info(user_info)`
+   - Updates user information in the database.
+   - Parameters: user_info (dict)
 
-## Key Functions
+10. `log_sms_to_db(contact_id, message, status, text_id, number, direction)`
+    - Logs an SMS message to the database.
+    - Parameters:
+      - contact_id (int)
+      - message (str)
+      - status (str)
+      - text_id (str)
+      - number (str)
+      - direction (str)
 
-- `open_firefox()`: Launches the Firefox browser.
-- `login_to_corrlinks()`: Automates the login process to Corrlinks.
-- `navigate_to_reply(url)`: Navigates to a specific reply URL in the browser.
-- `send_reply(message)`: Inputs and sends a reply message on the Corrlinks platform.
-- `verify_message_sent()`: Checks if a message was successfully sent.
-- `close_browser()`: Closes the Firefox browser.
+11. `update_sms_status_in_db(text_id, status)`
+    - Updates the status of an SMS message in the database.
+    - Parameters:
+      - text_id (str)
+      - status (str)
 
-## Database Interactions
-- Connects to a SQL database (likely SQL Server based on the connection string).
-- Reads from the SMS and Emails tables.
-- Updates the Processed status in the SMS table.
+12. `get_unprocessed_sms()`
+    - Retrieves unprocessed SMS messages from the database.
+    - Returns: list of tuples
 
-## Dependencies
-- PyAutoGUI: For browser and GUI automation.
-- pyodbc: For database connections (implied from the use of SQL Server).
-- logging: For logging operations and errors.
-- time: For introducing delays in automation steps.
-- pyperclip: For clipboard operations (if used in URL checks).
+13. `update_sms_processed(text_id)`
+    - Updates the processed status of an SMS message in the database.
+    - Parameters: text_id (str)
 
-## Configuration
-- Relies on external configuration (likely in variables.py) for database credentials, URLs, and other settings.
+14. `get_user_info_by_contact_id(contact_id)`
+    - Retrieves user information based on a contact ID.
+    - Parameters: contact_id (int)
+    - Returns: tuple or None
 
-## Error Handling and Logging
-- Implements comprehensive logging throughout the process.
-- Catches and logs exceptions at various levels of the operation.
+15. `get_contact_by_phone(db_connection, user_id, phone_number)`
+    - Looks up a contact based on the phone number for a specific user.
+    - Parameters:
+      - db_connection
+      - user_id (int)
+      - phone_number (str)
+    - Returns: dict or None
 
-## Execution
-- Can be run as a standalone script or imported and called from another module.
-- The `main()` function serves as the entry point when run as a script.
+16. `parse_contact_emails(driver, db_connection, cursor)`
+    - Fetches and parses contact emails to extract contact information.
+    - Parameters:
+      - driver
+      - db_connection
+      - cursor
 
-## Security Considerations
-- Handles sensitive information like database credentials and login details.
-- Care should be taken to secure the configuration file and any logs generated.
+17. `parse_contact_info(email_body)`
+    - Parses the email body to extract contact information using refined regex.
+    - Parameters: email_body (str)
+    - Returns: list of dicts
 
-## Performance Considerations
-- Processing time can vary based on the number of unprocessed messages and network/system performance.
-- Includes sleep timers to account for page load times and to prevent overwhelming the Corrlinks system.
+18. `insert_contacts_to_db(contacts, db_connection, user_id, driver, cursor)`
+    - Inserts the contact information into the database after checking for duplicates.
+    - Parameters:
+      - contacts (List[Dict])
+      - db_connection
+      - user_id (int)
+      - driver
+      - cursor
 
-## Maintenance and Scalability
-- May require adjustments to timing and selectors if the Corrlinks website interface changes.
-- Consider implementing a limit on the number of messages processed in a single run for very large backlogs.
+19. `send_contact_list_email(user_id, db_connection, cursor)`
+    - Sends an email containing the user's current contact list.
+    - Parameters:
+      - user_id (int)
+      - db_connection
+      - cursor
 
-# SMS-Reciever-API module documentation
+20. `remove_contact_from_db(contact_name, db_connection, user_id, cursor)`
+    - Removes a contact from the database.
+    - Parameters:
+      - contact_name (str)
+      - db_connection
+      - user_id (int)
+      - cursor
 
-1. ConTXTContext.fs:
-   - Defines the data model (Sms) and database context (ConTXTContext)
-   - Sms class: Represents the structure of an SMS message in the database
-   - ConTXTContext class: Inherits from DbContext and sets up the connection to the database
-   - OnModelCreating: Configures the "SMS" table in the database
+21. `add_contact_email(email_body, db_connection, user_id, driver, cursor)`
+    - Adds a contact email to the database.
+    - Parameters:
+      - email_body (str)
+      - db_connection
+      - user_id (int)
+      - driver
+      - cursor
 
-2. Program.fs:
-   - Entry point of the application
-   - Sets up the web application builder
-   - Configures services:
-     - Adds controllers for handling HTTP requests
-     - Sets up the database context with SQL Server
-   - Builds the application
-   - Configures the HTTP request pipeline:
-     - Enables HTTPS redirection
-     - Sets up authorization
-     - Maps controller routes
-   - Runs the application
+22. `add_contact_number(email_body, db_connection, user_id, driver, cursor)`
+    - Adds a contact number to the database.
+    - Parameters:
+      - email_body (str)
+      - db_connection
+      - user_id (int)
+      - driver
+      - cursor
 
-3. SmsController.fs:
-   - Defines the API endpoint for receiving SMS messages
-   - ReceiveSms method:
-     - Accepts POST requests with SmsPayload
-     - Creates a new Sms object
-     - Adds it to the database
-     - Saves changes asynchronously
-     - Returns a success message
-   - SmsPayload record: Defines the structure of incoming SMS data
+23. `set_screen_name(body, db_connection, user_id, cursor)`
+    - Sets the screen name for the user.
+    - Parameters:
+      - body (str)
+      - db_connection
+      - user_id (int)
+      - cursor
 
-4. launchSettings.json:
-   - Configures various launch profiles for the application
-   - Defines settings for running the app using:
-     - HTTP
-     - HTTPS
-     - IIS Express
-   - Sets environment variables and URLs for each profile
+24. `set_private_mode(user_id, db_connection, cursor)`
+    - Sets the user to private mode.
+    - Parameters:
+      - user_id (int)
+      - db_connection
+      - cursor
 
-5. SMS-Receiver-API.fsproj:
-   - Project file that defines the structure and dependencies of your application
-   - Specifies the target framework (.NET 8.0)
-   - Lists the F# source files to compile
-   - Includes NuGet package references:
-     - ASP.NET Core OpenAPI
-     - Entity Framework Core SQL Server
-     - Swashbuckle (for Swagger/OpenAPI support)
+## accept_invite.py
 
-6. appsettings.json:
-   - Configuration file for the application
-   - Stores key-value pairs for various application settings
-   - Includes:
-     - ConnectionStrings: Database connection details
-     - Logging: Configuration for logging levels and providers
-     - AllowedHosts: Specifies which hosts the app responds to
-   - Used by the application to retrieve settings at runtime
-   - Can be overridden by environment-specific versions (e.g., appsettings.Development.json)
-   - Accessed in code via IConfiguration interface, injected by the dependency injection system
-   - Allows for configuration changes without code modifications
+1. `log_request_info(url, method, headers, data=None, params=None, cookies=None)`
+   - Logs detailed information about an HTTP request.
+   - Parameters:
+     - url (str)
+     - method (str)
+     - headers (dict)
+     - data (dict, optional)
+     - params (dict, optional)
+     - cookies (dict, optional)
+
+2. `log_response_info(response)`
+   - Logs detailed information about an HTTP response.
+   - Parameters: response (requests.Response)
+
+3. `fetch_invite_code_and_name()`
+   - Retrieves an invite code and associated name from emails.
+   - Returns: tuple (invite_code, email_id, full_name) or (None, None, None)
+
+4. `extract_form_data(html)`
+   - Extracts form data from an HTML page.
+   - Parameters: html (str)
+   - Returns: dict
+
+5. `navigate_to_pending_contact(session)`
+   - Navigates to the Pending Contact page on the Corrlinks website.
+   - Parameters: session (requests.Session)
+   - Returns: tuple (response, form_data) or (None, None)
+
+6. `enter_invite_code(session, form_data, invite_code)`
+   - Enters an invite code on the Pending Contact page.
+   - Parameters:
+     - session (requests.Session)
+     - form_data (dict)
+     - invite_code (str)
+   - Returns: tuple (response, bool)
+
+7. `accept_invitation(session, form_data, invite_code)`
+   - Accepts an invitation on the Corrlinks website.
+   - Parameters:
+     - session (requests.Session)
+     - form_data (dict)
+     - invite_code (str)
+   - Returns: bool
+
+8. `process_invitation()`
+   - Processes an invitation from start to finish.
+   - Returns: bool
+
+9. `delete_invite_email(email_id)`
+   - Deletes the invite email after successful processing.
+   - Parameters: email_id (str)
+
+## pull_email.py
+
+1. `process_unread_emails(session, db_connection, cursor)`
+   - Processes unread emails from the Corrlinks inbox.
+   - Parameters:
+     - session (requests.Session)
+     - db_connection
+     - cursor
+
+2. `parse_ajax_response(response_text)`
+   - Parses the AJAX response to extract the relevant HTML content.
+   - Parameters: response_text (str)
+   - Returns: str or None
+
+3. `process_email_content(content, message_id)`
+   - Processes the content of a single email.
+   - Parameters:
+     - content (str)
+     - message_id (str)
+   - Returns: dict
+
+4. `extract_most_recent_message(full_message)`
+   - Extracts the most recent message from a potentially threaded email conversation.
+   - Parameters: full_message (str)
+   - Returns: str
+
+## send_sms.py
+
+1. `send_sms_threaded(user_id=None, contact_id=None, to_number=None, message_body=None, message_id=None)`
+   - Sends an SMS message using Textbelt's service in a separate thread.
+   - Parameters:
+     - user_id (int, optional)
+     - contact_id (int, optional)
+     - to_number (str, optional)
+     - message_body (str, optional)
+     - message_id (str, optional)
+
+2. `check_sms_status(text_id, user_id, message_id, message_body, to_number, contact_id, retry_count=0)`
+   - Checks the delivery status of an SMS and updates the database.
+   - Parameters:
+     - text_id (str)
+     - user_id (int)
+     - message_id (str)
+     - message_body (str)
+     - to_number (str)
+     - contact_id (int)
+     - retry_count (int, optional)
+
+3. `send_failure_notification_email(user_id, to_number, contact_id)`
+   - Sends a notification email to the user about SMS delivery failure.
+   - Parameters:
+     - user_id (int)
+     - to_number (str)
+     - contact_id (int)
+
+4. `process_sms_replies()`
+   - Processes SMS replies received through the system.
+
+5. `send_email_reply(contact_id, message, text_id, number)`
+   - Sends an email reply for an incoming SMS message.
+   - Parameters:
+     - contact_id (int)
+     - message (str)
+     - text_id (str)
+     - number (str)
+
+6. `check_quota(api_key)`
+   - Checks the remaining SMS quota for the given API key.
+   - Parameters: api_key (str)
+   - Returns: int or None
+
+7. `handle_long_email_reply(user_id, subject, body)`
+   - Handles email replies that exceed the 13000 character limit.
+   - Parameters:
+     - user_id (int)
+     - subject (str)
+     - body (str)
+
+## login.py
+
+1. `login_to_corrlinks()`
+   - Logs into the Corrlinks website and returns a session object.
+   - Returns: requests.Session or None
+
+This documentation provides an overview of the main functions in each module, their parameters, and return values. It can serve as a quick reference for understanding the structure and capabilities of the project.
