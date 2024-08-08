@@ -74,3 +74,22 @@ ConTXT is an application designed to facilitate communication between individual
 ---
 
 This documentation provides a comprehensive overview of the ConTXT project, outlining its purpose, functionalities, technical implementation, and operational strategies. It serves as a foundational document for developers, ensuring all team members have a clear understanding of the project's scope and objectives.# ConTXT Application
+
+
+## How to Run Code:
+
+### Troubleshooting
+
+When running code on macOS or Linux, you need to comment out the following lines in `login.py`:
+
+```python
+path = os.path.abspath(os.path.dirname(__file__))
+ctypes.cdll.LoadLibrary(f'{path}\\{FINGERPRINT_DLL}')
+
+```
+
+## Splash
+
+Also for running splash on local for testing make sure that you have docker and docker compose installed on your system. Run the below command at the root level of the code base:
+
+`docker compose up -d --build`
