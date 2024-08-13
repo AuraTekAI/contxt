@@ -371,3 +371,6 @@ env/
 # Ignoring test result files
 *.html
 
+# Database config
+database.ini
+

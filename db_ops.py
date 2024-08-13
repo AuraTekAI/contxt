@@ -6,7 +6,9 @@ import re
 from typing import List, Dict
 from datetime import datetime, timedelta
 from variables import *
-from push_email import process_emails
+from Documentation.OldSampleCode.push_email_gui import process_emails
+
+import psycopg2
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -29,8 +31,8 @@ def get_database_connection():
     """
     Attempts to establish a database connection using the configuration.
     Returns:
-    - connection (pyodbc.Connection): The database connection object.
-    - cursor (pyodbc.Cursor): The cursor object for executing SQL commands.
+    - connection: The database connection object.
+    - cursor: The cursor object for executing SQL commands.
 
     This function tries to connect to the database, performs a quick test to ensure the connection is active, and returns the connection and cursor objects.
     It includes error handling and logging for connection failures.
@@ -38,20 +40,28 @@ def get_database_connection():
     logging.info("Attempting to establish database connection.")
     connection, cursor = None, None
     try:
-        connection = pyodbc.connect(DB_SETTINGS['CONN_STR'])
-        cursor = connection.cursor()
-        # Perform a quick test to ensure the connection is active
-        if not check_connection(cursor):
-            logging.info("Connection test failed. Trying to reconnect.")
-            connection.close()
-            connection = pyodbc.connect(DB_SETTINGS['CONN_STR'])
+        if DB_TYPE == "postgres":
+            # PostgreSQL connection setup
+            connection = psycopg2.connect(**DB_SETTINGS['postgres'])
             cursor = connection.cursor()
+            # Perform a quick test to ensure the connection is active
+            cursor.execute("SELECT 1")
+        elif DB_TYPE == "mssql":
+            # MSSQL connection setup
+            connection = pyodbc.connect(DB_SETTINGS['default']['CONN_STR'])
+            cursor = connection.cursor()
+            # Perform a quick test to ensure the connection is active
+            cursor.execute("SELECT 1")
+        else:
+            raise ValueError(f"Unsupported DB_TYPE: {DB_TYPE}")
+        
         logging.info("Database connected successfully.")
-    except pyodbc.Error as e:
+    except Exception as e:
         logging.error(f"Failed to connect to the database: {e}")
         if connection:
             connection.close()
         return None, None
+    
     return connection, cursor
 
 def check_connection(cursor):
@@ -718,3 +728,68 @@ def set_private_mode(user_id, db_connection, cursor):
         email_callback(user_id, "Private Mode Activated", message_content)
     else:
         logging.error("Email callback not set. Unable to send private mode activation confirmation.")
+
+
+def fetch_unprocessed_sms(cursor):
+    """
+    Fetch unprocessed SMS messages with direction 'Inbound' from the database.
+    
+    Args:
+    - cursor: The database cursor object.
+    - db_type: The type of database being used ('postgres' or 'mssql').
+    
+    Returns:
+    - List of unprocessed SMS messages.
+    """
+    query = """
+        SELECT SMSID, ContactID, Message, EmailID 
+        FROM dbo.SMS 
+        WHERE Processed = 'N' AND Direction = 'Inbound'
+    """
+    
+    if DB_TYPE == "postgres":
+        # PostgreSQL uses %s as a placeholder for parameters
+        cursor.execute(query)
+    elif DB_TYPE == "mssql":
+        # MSSQL uses ? as a placeholder for parameters
+        cursor.execute(query.replace('%s', '?'))
+    else:
+        raise ValueError(f"Unsupported DB_TYPE: {DB_TYPE}")
+    
+    return cursor.fetchall()
+
+
+def fetch_email_details(cursor, email_id):
+    """
+    Fetch email details based on EmailID.
+
+    Parameters:
+    - cursor: The database cursor object.
+    - email_id: The email ID to search for.
+
+    Returns:
+    - Tuple containing the email details or None if not found.
+    """
+    if DB_TYPE == 'postgres':
+        # PostgreSQL uses %s as a placeholder
+        query = "SELECT MessageID, UserID FROM dbo.Emails WHERE EmailID = %s"
+    else:
+        # MSSQL uses ? as a placeholder
+        query = "SELECT MessageID, UserID FROM dbo.Emails WHERE EmailID = ?"
+
+    cursor.execute(query, (email_id,))
+    return cursor.fetchone()
+
+def update_sms_processed_value(cursor, sms_id):
+    """Mark SMS as processed in the database."""
+    try:
+        if DB_TYPE == "postgres":
+            # For PostgreSQL, use %s as the placeholder
+            cursor.execute("UPDATE dbo.SMS SET Processed = 'Y' WHERE SMSID = %s", (sms_id,))
+        else:
+            # For SQL Server (and others like MySQL), use ? as the placeholder
+            cursor.execute("UPDATE dbo.SMS SET Processed = 'Y' WHERE SMSID = ?", (sms_id,))
+
+        logging.info(f"Database updated: SMS {sms_id} marked as processed.")
+    except Exception as e:
+        logging.error(f"Failed to update SMS {sms_id} as processed: {e}")

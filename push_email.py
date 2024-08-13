@@ -2,10 +2,13 @@
 
 import logging
 import json
-import datetime
 
 from login import login_to_corrlinks
-from variables import MAX_EMAIL_REPLY_RETRIES, HEADERS_FOR_PUSH_EMAIL_REQUEST, LUA_SCRIPT, SPLASH_URL
+from variables import MAX_EMAIL_REPLY_RETRIES, HEADERS_FOR_PUSH_EMAIL_REQUEST, SPLASH_URL, \
+    ENVIRONMENT
+from utils.helper_functions import convert_cookies_to_splash_format, get_sms_replies_for_send_email, \
+    update_sms_processed_status
+
 
 
 # Set up logging
@@ -85,40 +88,6 @@ def log_response_info(response, is_splash_response=False, retry_number=0):
             f.write(response.text)
     logging.info(f"=====================")
 
-def convert_cookies_to_splash_format(splash_cookies=None, cookies=None):
-    """
-    Converts cookies to the format required by Splash.
-
-    Parameters:
-    - splash_cookies (list): The list to which formatted cookies will be appended.
-    - cookies (dict): The dictionary of cookies to be converted, with cookie names as keys and cookie values as values.
-
-    Returns:
-    - list: The updated list of Splash-formatted cookies if both parameters are provided.
-    - bool: False if the necessary parameters are not provided.
-
-    This function takes a dictionary of cookies and appends them to a list in a format that can be used by Splash,
-    including setting attributes such as name, value, expiration time, path, httpOnly, secure, and domain.
-    If either parameter is missing or None, the function returns False.
-    """
-    if (not splash_cookies == None) and (cookies):
-        now = datetime.datetime.now()
-        expires = now + datetime.timedelta(hours=1)
-        for name, value in cookies.items():
-            cookie = {
-                'name': name,
-                'value': value,
-                'expires': expires.isoformat(),
-                'path': '/',
-                'httpOnly': True,
-                'secure': True,
-                'domain': 'www.corrlinks.com'
-            }
-            splash_cookies.append(cookie)
-        return splash_cookies
-    else:
-        return False
-    
 
 def send_email_reply(session, message_content, message_id, session_state):
     """
@@ -143,7 +112,8 @@ def send_email_reply(session, message_content, message_id, session_state):
     Setting up lua_script that needs to run on the splash browser window.
     Also settings headers and cookies, which are later used in splash.
     """
-    lua_script = LUA_SCRIPT
+    with open('utils/lua_scripts/send_email_reply.lua', 'r') as file:
+        lua_script = file.read()
     headers = HEADERS_FOR_PUSH_EMAIL_REQUEST
     cookies = session_state['cookies']
 
@@ -219,9 +189,18 @@ def run_push_email():
     and handles the response. It's designed for testing and logging purposes.
     """
 
-    # TODO Get these from the database.
-    message_id = "3728844321"
-    message_content = "This is a test reply message. Please ignore these messages. Appologies for any inconvenience."
+    message_id_content = []
+    
+    if ENVIRONMENT == 'TEST':
+        message_id = "3728844321"
+        message_content = "This is a test reply message. Please ignore these messages. Appologies for any inconvenience."
+        message_id_content.append([message_id, message_content])
+    else:
+        message_id_content = get_sms_replies_for_send_email(message_id_content=message_id_content)
+
+    if message_id_content == None or message_id_content == []:
+        logging.info('No SMS messages found to process at the moment.')
+        return "No SMS messages found to process at the moment."
     
     session = login_to_corrlinks()
     if not session:
@@ -231,19 +210,30 @@ def run_push_email():
     # Capture the session state right after login
     session_state = capture_session_state(session)
 
-    """
-    This part is responsible for replying to the message. First step is navigation to the reply page.
-    Second step is to enter the message in the textbox.
-    Last step is to send the reply to the sender of the message.
-    All relevant logging has been moved inside the send_email_reply function.
-    """
-    success = send_email_reply(session=session, message_content=message_content, message_id=message_id, session_state=session_state)
-    if success:
-        logging.info("Email reply sent successfully")
-        return "Email reply sent successfully. Check push_email_interaction.log for details."
-    else:
-        logging.error("Failed to send email reply")
-        return "Failed to send email reply. Check push_email_interaction.log for details."
+    for sms_data in message_id_content:
+        """
+        This part is responsible for replying to the message. First step is navigation to the reply page.
+        Second step is to enter the message in the textbox.
+        Last step is to send the reply to the sender of the message.
+        All relevant logging has been moved inside the send_email_reply function.
+        """
+        sms_id, message_id, message_content = sms_data
+        if (not message_id == None) and (not message_content == None):
+            success = send_email_reply(session=session, message_content=message_content, message_id=message_id, session_state=session_state)
+        else:
+            continue
+
+        if success:
+            if not ENVIRONMENT == 'TEST':
+                status = update_sms_processed_status(sms_id=sms_id)
+                if status:
+                    logging.info('SMS processed value updated successfully.')
+                else:
+                    logging.error('An error occured while updating SMS processed value.')
+            logging.info(f"Email reply sent successfully  sms_id = {sms_id} message_id = {message_id}")
+        else:
+            logging.error("Failed to send email reply. sms_id = {sms_id} message_id = {message_id}. Check push_email_interaction.log for details.")
+    return "Push email operation completed. Check push_email_interaction.log for details."
 
 if __name__ == "__main__":
     print(run_push_email())
