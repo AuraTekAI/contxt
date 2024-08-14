@@ -1,24 +1,363 @@
 ## accept_invite.py ##
 
+from utils.helper_functions import convert_cookies_to_splash_format
+
 import logging
 import imaplib
 import email
-import time
 import json
-import os
-from bs4 import BeautifulSoup
-from requests import Session
+from selectolax.lexbor import LexborHTMLParser
 from email.header import decode_header
 from datetime import datetime, timedelta
 from variables import *
-from main import *
-from db_ops import *
 from login import *
 
 # Set up logging
 logging.basicConfig(filename='corrlinks_interaction.log', level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
+class MailBox:
+    """
+    A class to interact with an email inbox using the IMAP protocol.
+    
+    This class provides functionalities to connect to an email server, log in, 
+    retrieve, process, and delete emails. It is designed to handle emails containing
+    invitation codes and extract relevant details such as the invite code and full name.
+    
+    Parameters:
+    - user_name (str): The username/email address for the mailbox.
+    - password (str): The password for the mailbox.
+    - email_url (str): The IMAP URL of the email service provider.
+    """
+    def __init__(self, user_name, password, email_url):
+        """
+        Initializes the MailBox class with user credentials and server URL.
+        
+        Parameters:
+        - user_name (str): The username/email address for the mailbox.
+        - password (str): The password for the mailbox.
+        - email_url (str): The IMAP URL of the email service provider.
+        
+        Initializes instance variables to store user credentials, email server URL,
+        and a placeholder for the mailbox connection.
+        """
+        self.user_name = user_name
+        self.password = password
+        self.email_url = email_url
+        self.mail = None
+
+    def __enter__(self):
+        """
+        Establishes a connection to the mailbox and logs in.
+        
+        Returns:
+        - MailBox: The instance of the MailBox class with an active connection.
+        
+        This method is called when entering the context of a 'with' statement.
+        It connects to the mailbox and logs in using the provided credentials.
+        """
+        self.mail = self.get_mailbox_with_url()
+        self.login_mailbox()
+        logging.info("Logged in mailbox")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        Logs out from the mailbox and closes the connection.
+        
+        This method is called when exiting the context of a 'with' statement.
+        It ensures that the mailbox connection is properly closed.
+        """
+        self.mail.logout()
+        logging.info("Logged out from mailbox")
+
+    def get_mailbox_with_url(self):
+        """
+        Connects to the mailbox using the specified email URL.
+        
+        Returns:
+        - imaplib.IMAP4_SSL: An IMAP connection object.
+        
+        Raises:
+        - Exception: If the connection to the email server fails.
+        
+        This method establishes a secure connection to the email server using IMAP4_SSL.
+        """
+        try:
+            mail = imaplib.IMAP4_SSL(self.email_url)
+            logging.info(f"Connected to: {self.email_url}")
+            return mail
+        except Exception as e:
+            logging.error(f"Failed to connect to {self.email_url}: {e}")
+            raise
+
+    def login_mailbox(self):
+        """
+        Logs in to the mailbox using the provided username and password.
+        
+        Raises:
+        - Exception: If the login process fails.
+        
+        This method logs in to the mailbox using the credentials provided during 
+        the initialization of the class.
+        """
+        try:
+            self.mail.login(self.user_name, self.password)
+            logging.info(f"Logged in as {self.user_name}")
+        except Exception as e:
+            logging.error(f"Login failed for {self.user_name}: {e}")
+            raise
+    
+    def get_inbox(self):
+        """
+        Selects the inbox folder within the mailbox.
+        
+        Raises:
+        - Exception: If the inbox cannot be selected.
+        
+        This method selects the "inbox" folder in the mailbox, preparing it 
+        for operations such as searching or fetching emails.
+        """
+        try:
+            self.mail.select("inbox")
+            logging.info("Selected inbox")
+        except Exception as e:
+            logging.error(f"Failed to select inbox: {e}")
+            raise
+    
+    def days_filter_value(self, days):
+        """
+        Generates a date filter string for searching emails.
+        
+        Parameters:
+        - days (int): The number of days to subtract from the current date.
+        
+        Returns:
+        - str: A date string in the format 'DD-MMM-YYYY'.
+        
+        This method returns a date string used to filter emails based on their 
+        age relative to the current date.
+        """
+        return (datetime.now() - timedelta(days=days)).strftime("%d-%b-%Y")
+
+    def search_mail_using_date_text_value(self, days, text_value):
+        """
+        Searches for emails in the inbox based on date and text criteria.
+        
+        Parameters:
+        - days (int): The number of days to look back from today.
+        - text_value (str): The text to search for within the emails.
+        
+        Returns:
+        - list: A list of email IDs that match the search criteria.
+        
+        Raises:
+        - Exception: If the search fails.
+        
+        This method searches the inbox for emails that match the specified 
+        date and text criteria, returning a list of matching email IDs.
+        """
+        try:
+            date = self.days_filter_value(days)
+            status, messages = self.mail.search(None, f'{text_value} "{date}")')
+            if status == "OK":
+                logging.info(f"Found {len(messages[0].split())} messages matching criteria.")
+                return messages[0].split()
+            else:
+                logging.warning("No messages found matching criteria.")
+                return []
+        except Exception as e:
+            logging.error(f"Failed to search mail: {e}.")
+            raise
+
+    def sort_email_ids(self, email_ids):
+        """
+        Sorts a list of email IDs in descending order.
+        
+        Parameters:
+        - email_ids (list): A list of email IDs (as strings) to be sorted.
+        
+        Returns:
+        - list: The sorted list of email IDs in descending order.
+        
+        Raises:
+        - ValueError: If the email IDs cannot be converted to integers.
+        
+        This method sorts the provided list of email IDs in descending order,
+        which is used to process the most recent emails first.
+        """
+        try:
+            sorted_ids = sorted(email_ids, key=lambda x: int(x), reverse=True)
+            logging.info(f"Sorted email IDs: {sorted_ids}")
+            return sorted_ids
+        except ValueError as e:
+            logging.error(f"Failed to sort email IDs: {e}")
+            raise
+    
+    def fetch_email(self, email_id):
+        """
+        Fetches the full content of an email by its ID.
+        
+        Parameters:
+        - email_id (str): The ID of the email to be fetched.
+        
+        Returns:
+        - list: A list of tuples containing the raw email data.
+        
+        Raises:
+        - Exception: If fetching the email fails.
+        
+        This method retrieves the complete email message, including headers and body,
+        for the given email ID.
+        """
+        try:
+            logging.info(f"Processing invite email ID: {email_id}")
+            status, msg_data = self.mail.fetch(email_id, "(RFC822)")
+            logging.info(f"Fetch status: {status}")
+            if status == "OK":
+                return msg_data
+            else:
+                logging.error(f"Failed to fetch email ID {email_id}: {status}")
+                return None
+        except Exception as e:
+            logging.error(f"Error fetching email ID {email_id}: {e}")
+            raise
+    
+    def process_email(self, msg_data):
+        """
+        Processes an email to extract the subject, date, and body content.
+        
+        Parameters:
+        - msg_data (list): The raw email data fetched from the server.
+        
+        Returns:
+        - tuple: A tuple containing the invite code and full name if found, otherwise None.
+        
+        Raises:
+        - Exception: If processing the email fails.
+        
+        This method processes the fetched email data to extract the subject, date,
+        and body. It checks for specific content related to invitations and extracts
+        the invite code and the full name of the person.
+        """
+        try:
+            for response_part in msg_data:
+                if isinstance(response_part, tuple):
+                    msg = email.message_from_bytes(response_part[1])
+                    subject, date = self.extract_subject_and_date(msg)
+                    if "Person in Custody:" in subject:
+                        body = self.get_email_body(msg)
+                        invite_code, full_name = self.extract_invite_code_and_name(subject, body)
+                        if invite_code and full_name:
+                            return invite_code, full_name
+        except Exception as e:
+            logging.error(f"Error processing email: {e}")
+            raise
+    
+    def extract_subject_and_date(self, msg):
+        """
+        Extracts and decodes the subject and date from an email.
+        
+        Parameters:
+        - msg (email.message.EmailMessage): The email message object.
+        
+        Returns:
+        - tuple: A tuple containing the decoded subject (str) and date (datetime).
+        
+        This method extracts and decodes the subject and date from the email's headers.
+        """
+        subject = decode_header(msg['Subject'])[0][0]
+        if isinstance(subject, bytes):
+            subject = subject.decode()
+        date = email.utils.parsedate_to_datetime(msg['Date'])
+        logging.info(f"Email subject: {subject}, Date: {date}")
+        return subject, date
+    
+    def get_email_body(self, msg):
+        """
+        Retrieves the email body, handling both plain text and multipart messages.
+        
+        Parameters:
+        - msg (email.message.EmailMessage): The email message object.
+        
+        Returns:
+        - str: The decoded email body content.
+        
+        Raises:
+        - Exception: If the body cannot be retrieved or decoded.
+        
+        This method retrieves the body of the email, handling multipart messages to extract 
+        the relevant text content.
+        """
+        try:
+            if msg.is_multipart():
+                for part in msg.walk():
+                    if part.get_content_type() == "text/plain":
+                        return part.get_payload(decode=True).decode()
+            else:
+                return msg.get_payload(decode=True).decode()
+        except Exception as e:
+            logging.error(f"Failed to get email body: {e}")
+            raise
+    
+    def extract_invite_code_and_name(self, subject, body):
+        """
+        Extracts the invite code and full name from the email subject and body.
+        
+        Parameters:
+        - subject (str): The decoded subject of the email.
+        - body (str): The decoded body content of the email.
+        
+        Returns:
+        - tuple: A tuple containing the invite code (str) and full name (str).
+        
+        Raises:
+        - Exception: If the invite code or full name cannot be extracted.
+        
+        This method searches the email body for an invite code and extracts the full name 
+        from the subject. It returns both values if found.
+        """
+        try:
+            invite_code_line = [line for line in body.split('\n') if "Identification Code:" in line]
+            if invite_code_line:
+                invite_code = invite_code_line[0].split(":")[1].strip()
+                logging.info(f"Found invite code: {invite_code}")
+                
+                # Extract full name from subject
+                name_part = subject.split(":")[1].strip()
+                last_name, first_name = name_part.split(", ")
+                full_name = f"{first_name} {last_name}"
+                logging.info(f"Extracted full name: {full_name}")
+                
+                return invite_code, full_name
+            else:
+                logging.warning("Invite code not found in the email body")
+                return None, None
+        except Exception as e:
+            logging.error(f"Error extracting invite code and name: {e}")
+            raise
+    
+    def delete_invite_email(self, email_id):
+        """
+        Deletes the invite email after successful processing.
+        
+        Parameters:
+        - email_id (str): The ID of the email to delete.
+        
+        Raises:
+        - Exception: If the email cannot be deleted.
+        
+        This method deletes an email from the inbox based on its ID after it has been 
+        successfully processed to ensure it is not processed again.
+        """
+        try:
+            self.mail.store(email_id, '+FLAGS', '\\Deleted')
+            self.mail.expunge()
+            logging.info(f"Successfully deleted invite email with ID: {email_id}")
+        except Exception as e:
+            logging.error(f"Failed to delete invite email: {str(e)}")
+            raise
+    
 def log_request_info(url, method, headers, data=None, params=None, cookies=None):
     """
     Logs detailed information about an HTTP request.
@@ -48,14 +387,31 @@ def log_request_info(url, method, headers, data=None, params=None, cookies=None)
         logging.info(json.dumps(dict(cookies), indent=2))
     logging.info("====================")
 
-def log_response_info(response):
+def log_response_info(response, is_splash_request=False):
     """
     Logs detailed information about an HTTP response.
+    
     Parameters:
-    - response (requests.Response): The response object to log
-
-    This function logs the status code, headers, cookies, and body of an HTTP response.
-    It also attempts to extract and log any error messages from the response body.
+    - response (requests.Response): The HTTP response object to log.
+    - is_splash_request (bool, optional): Indicates if the response is from a Splash request (default is False).
+    
+    This function logs the following details of an HTTP response:
+    - Status code: The HTTP status code returned by the server.
+    - Headers: The headers included in the HTTP response.
+    - Cookies: Any cookies set by the server in the response.
+    - Response body: The content of the response, with only the first 2000 characters logged for brevity.
+    
+    Additionally, if the response status code indicates an error (i.e., not 200 OK), the function attempts to 
+    extract and log any error messages from the response body. If `is_splash_request` is True, it processes the 
+    response as a JSON object, specifically looking for the 'html' field.
+    
+    Error Handling:
+    - The function handles potential HTML parsing errors by using LexborHTMLParser to extract error messages 
+      from the response body.
+    - If a detailed error message is found within a `<div>` tag with the class `errortext`, it is logged as an error.
+    
+    The function logs all relevant information and includes separators to clearly distinguish the response 
+    details in the logs.
     """
     logging.info("=== RESPONSE INFO ===")
     logging.info(f"Status Code: {response.status_code}")
@@ -64,419 +420,329 @@ def log_response_info(response):
     logging.info("Cookies:")
     logging.info(json.dumps(dict(response.cookies), indent=2))
     logging.info("Response Body:")
-    logging.info(response.text[:2000])  # Log first 2000 characters of response
+    if is_splash_request:
+        result = response.json()
+        text = result.get('html', None)
+        logging.info(text[:2000])
+    else:
+        logging.info(response.text[:2000])  # Log first 2000 characters of response
     
     # Try to extract more detailed error information
     if response.status_code != 200:
-        soup = BeautifulSoup(response.text, 'html.parser')
-        error_msg = soup.find('div', class_='errortext')
-        if error_msg:
-            logging.error(f"Detailed error message: {error_msg.text}")
+        if is_splash_request:
+            result = response.json()
+            html = result.get('html', None)
+            if html:
+                parser = LexborHTMLParser(html)
+            else:
+                return None
+        else:
+            parser = LexborHTMLParser(response.text)
+        
+        # Extract error message
+        error_divs = parser.css('div.errortext')
+        if error_divs:
+            error_msg = error_divs[0].text().strip()
+            logging.error(f"Detailed error message: {error_msg}")
     
     logging.info("=====================")
 
 def fetch_invite_code_and_name():
     """
-    Retrieves an invite code and associated name from emails.
+    Retrieves invite codes and associated names from emails.
+    
     Returns:
-    - tuple: (invite_code, email_id, full_name) if found, (None, None, None) otherwise
+    - dict: A dictionary where the keys are invite codes and the values are lists containing 
+            the full name associated with the invite and the email ID, i.e., {invite_code: [full_name, email_id]}.
+            Returns an empty dictionary if no invites are found.
+    
+    This function connects to an email server using the `MailBox` class, searches for emails containing specific 
+    subject lines that indicate an invite, and extracts the invite codes and user names from these emails.
+    
+    The process includes:
+    - Connecting to the email server and logging in.
+    - Selecting the inbox for searching relevant emails.
+    - Searching for emails within a specified number of days using a predefined search string.
+    - If no emails are found, performing a broader search using an alternative search string.
+    - Sorting the found email IDs in descending order to prioritize more recent emails.
+    - Fetching the content of each email, extracting the invite code and full name, and storing this information.
+    
+    Error Handling:
+    - Logs relevant information if no emails are found matching the criteria.
+    - If the function cannot find any invite emails or if there are errors during the process, 
+      it returns an empty dictionary.
+    - The function logs each step of the process for transparency and debugging purposes.
 
-    This function connects to an email server, searches for emails with specific subjects,
-    and extracts invite codes and user names from these emails. It handles email parsing,
-    decoding, and error logging.
+    Usage:
+    - The function is used to automate the retrieval of invite codes from a set of emails, 
+      which can be further processed as needed.
     """
+
     logging.info("Starting to fetch invite code and name")
+    # Initialize an empty dictionary to store invite codes and associated names.
+    # Keys will be invite codes, and values will be lists containing the full name and email ID.
+    invite_code_full_name_data = {}
     try:
-        mail = imaplib.IMAP4_SSL(EMAILURL0)
-        logging.info(f"Connected to: {EMAILURL0}")
-        
-        mail.login(EMAIL0_USERNAME, EMAIL0_PASSWORD)
-        logging.info(f"Logged in with username: {EMAIL0_USERNAME}")
-        
-        mail.select("inbox")
-        logging.info("Selected inbox")
-        
-        # First, let's get all emails from the last 7 days
-        date_since = (datetime.now() - timedelta(days=7)).strftime("%d-%b-%Y")
-        status, messages = mail.search(None, f'(SINCE "{date_since}")')
-        email_ids = messages[0].split()
-        logging.info(f"Total emails in the last 30 days: {len(email_ids)}")
-        
-        # Search for emails with the subject "Person in Custody:"
-        status, messages = mail.search(None, f'(SUBJECT "Person in Custody:" SINCE "{date_since}")')
-        invite_email_ids = messages[0].split()
-        logging.info(f"Search status: {status}, Number of invite messages found: {len(invite_email_ids)}")
-        
-        if not invite_email_ids:
-            logging.info("No emails found with exact subject. Trying a broader search.")
-            status, messages = mail.search(None, f'(SUBJECT "Custody" SINCE "{date_since}")')
-            invite_email_ids = messages[0].split()
-            logging.info(f"Broader search status: {status}, Number of potential invite messages found: {len(invite_email_ids)}")
-        
-        # Sort emails by date, newest first
-        invite_email_ids.sort(key=lambda x: int(x), reverse=True)
-        
-        for email_id in invite_email_ids:
-            logging.info(f"Processing invite email ID: {email_id}")
-            status, msg_data = mail.fetch(email_id, "(RFC822)")
-            logging.info(f"Fetch status: {status}")
+        # Create a MailBox instance to connect to the email server using provided credentials.
+        # EMAIL0_USERNAME, EMAIL0_PASSWORD, and MAILURL0 should be predefined constants with email credentials and server URL.
+        with MailBox(EMAIL0_USERNAME, EMAIL0_PASSWORD, EMAILURL0) as mailbox:
+            # Access the inbox of the email account.
+            mailbox.get_inbox()
+
+            # Search for emails within the specified number of days MAIL_SEARCH_DAYS_VALUE that contain 
+            # the text specified by MAIL_SEARCH_STRING. This string should relate to the invite emails' subject or content.
+            invite_email_ids = mailbox.search_mail_using_date_text_value(MAIL_SEARCH_DAYS_VALUE, MAIL_SEARCH_STRING)
+
+            # If no emails are found with the initial search criteria, perform a broader search with an alternative search string.
+            if not invite_email_ids:
+                # Try using broader search terms
+                invite_email_ids = mailbox.search_mail_using_date_text_value(MAIL_SEARCH_DAYS_VALUE, MAIL_BROADER_SEARCH_STRING)
             
-            for response_part in msg_data:
-                if isinstance(response_part, tuple):
-                    msg = email.message_from_bytes(response_part[1])
-                    subject = decode_header(msg['Subject'])[0][0]
-                    if isinstance(subject, bytes):
-                        subject = subject.decode()
-                    date = email.utils.parsedate_to_datetime(msg['Date'])
-                    logging.info(f"Email subject: {subject}, Date: {date}")
-                    
-                    if "Person in Custody:" in subject:
-                        if msg.is_multipart():
-                            for part in msg.walk():
-                                if part.get_content_type() == "text/plain":
-                                    body = part.get_payload(decode=True).decode()
-                        else:
-                            body = msg.get_payload(decode=True).decode()
-                        
-                        # Extract invite code
-                        invite_code_line = [line for line in body.split('\n') if "Identification Code:" in line]
-                        if invite_code_line:
-                            invite_code = invite_code_line[0].split(":")[1].strip()
-                            logging.info(f"Found invite code: {invite_code}")
-                            
-                            # Extract full name from subject
-                            name_part = subject.split(":")[1].strip()
-                            last_name, first_name = name_part.split(", ")
-                            full_name = f"{first_name} {last_name}"
-                            logging.info(f"Extracted full name: {full_name}")
-                            
-                            return invite_code, email_id, full_name
-                    else:
-                        logging.info(f"Email subject does not match exactly: {subject}")
-        
-        logging.info("No invite found in any emails")
-        return None, None, None
+            # Check if any emails were found with the broader search criteria.
+            if not invite_email_ids == None and not invite_email_ids == []:
+                # Sort the found email IDs in descending order to prioritize more recent emails.
+                invite_email_ids = mailbox.sort_email_ids(email_ids = invite_email_ids)
+            else:
+                # If no emails are found after the broader search, log this information and return an empty dictionary.
+                logging.info("No invite found in any emails")
+                return None
+
+            for email_id in invite_email_ids:
+                # Fetch the content of the email using the email ID.
+                msg_data = mailbox.fetch_email(email_id)
+                # If the email content is successfully retrieved, process it to extract invite code and full name.
+                if msg_data:
+                    invite_code, full_name = mailbox.process_email(msg_data)
+                    # If both invite code and full name are successfully extracted, store them in the dictionary.
+                    if invite_code and full_name:
+                        print(f"Invite Code: {invite_code}, Full Name: {full_name}")
+                        invite_code_full_name_data[invite_code] = [full_name, email_id]
+            # Return the dictionary containing invite codes and associated names.
+            return invite_code_full_name_data
+
     except Exception as e:
         logging.error(f"An error occurred while fetching invite: {str(e)}")
-        return None, None, None
-    finally:
-        try:
-            mail.logout()
-            logging.info("Logged out from mail server")
-        except:
-            pass
+        return None
 
-def extract_form_data(html):
+
+def navigate_enter_code_accept_invite(session, invitation_code=None, email_id=None, lua_script=None):
     """
-    Extracts form data from an HTML page.
+    Navigates to the Pending Contact page on the Corrlinks website, enters an invitation code, 
+    and attempts to accept the invite.
+
     Parameters:
-    - html (str): The HTML content to parse
+    - session (requests.Session): The session object used to maintain and manage cookies and headers across requests.
+    - invitation_code (str, optional): The invite code to be entered into the designated input box on the web page.
+    - email_id (str, optional): The ID of the email containing the invitation code, used to delete the email after processing.
+    - lua_script (str, optional): The Lua script used by the Splash service to render the page and interact with its elements.
 
     Returns:
-    - dict: A dictionary of form field names and their values
+    - dict: The JSON response from the Splash service if successful, containing the HTML content, 
+            processing status, and other data.
+    - None: If the function fails to process the invitation code after the maximum number of retries.
 
-    This function uses BeautifulSoup to parse the HTML and extract all input fields
-    from a form with the id 'aspnetForm'. It's used to prepare data for form submissions.
-    """
-    soup = BeautifulSoup(html, 'html.parser')
-    form = soup.find('form', id='aspnetForm')
-    if not form:
-        logging.warning("Form not found in HTML")
-        return {}
-    
-    form_data = {}
-    for input_tag in form.find_all('input'):
-        name = input_tag.get('name')
-        value = input_tag.get('value', '')
-        if name:
-            form_data[name] = value
-    
-    logging.info("Extracted Form Data:")
-    logging.info(json.dumps(form_data, indent=2))
-    return form_data
-        
-def navigate_to_pending_contact(session):
-    """
-    Navigates to the Pending Contact page on the Corrlinks website.
-    Parameters:
-    - session (requests.Session): The session object for making requests
+    This function performs the following steps:
+    1. **Navigates to the Pending Contact Page**: It initiates a POST request to the Splash service with parameters 
+       necessary for rendering and interacting with the Corrlinks website.
+    2. **Session Validation**: Checks if the session is still valid by analyzing the response from the Splash service.
+    3. **Form Submission and Invite Acceptance**: It attempts to enter the invitation code, submit the form, 
+       and check for the presence of specific elements on the rendered page that indicate a successful submission.
+    4. **Error Handling and Retries**: If the request fails, it retries up to a predefined number of times (`MAX_ACCEPT_INVITE_RETRIES`).
+    5. **Email Deletion**: If the invitation code is processed successfully, it connects to the email server, 
+       selects the inbox, and deletes the processed email.
 
-    Returns:
-    - tuple: (response, form_data) if successful, (None, None) if session expired
+    Logging:
+    - Logs the session cookies before navigation to assist in debugging issues related to session management.
+    - Logs detailed request and response information, including the response status, HTML content, 
+      and error messages if the request fails.
 
-    This function sends a GET request to the Pending Contact page, checks if the session is still valid,
-    and extracts the form data from the response. It logs detailed request and response information.
+    Usage:
+    - This function is used to automate the acceptance of invitation codes on the Corrlinks website, 
+      with detailed logging and error handling to ensure reliability in various network or site conditions.
+    - The function's retry mechanism ensures multiple attempts to process the invitation code, 
+      increasing the chances of success even if the initial request fails.
     """
+
+    # Log the start of the navigation process and the session cookies for debugging.
     logging.info("Navigating to Pending Contact page")
     logging.info(f"Session cookies before navigation: {dict(session.cookies)}")
-    response = session.get(CONTACT_URL)
-    logging.info(f"Session cookies after navigation: {dict(session.cookies)}")
-    
-    # Check if we're still logged in
-    if "Login" in response.text:
-        logging.error("Session appears to have expired. Need to re-login.")
-        return None, None
-    
-    log_request_info(CONTACT_URL, "GET", dict(response.request.headers), 
-                     cookies=session.cookies)
-    log_response_info(response)
-    
-    form_data = extract_form_data(response.text)
-    
-    return response, form_data
 
-def enter_invite_code(session, form_data, invite_code):
-    """
-    Enters an invite code on the Pending Contact page.
-    Parameters:
-    - session (requests.Session): The session object for making requests
-    - form_data (dict): The form data extracted from the page
-    - invite_code (str): The invite code to enter
+    # Convert the cookies from the `requests` format to the format required by Splash.
+    # This prepares the cookies for use in the Splash request.
+    splash_cookies = []
+    splash_cookies = convert_cookies_to_splash_format(splash_cookies=splash_cookies, cookies=session.cookies)
 
-    Returns:
-    - tuple: (response, bool) where bool indicates if the invite code was successfully entered
+    # Prepare the cookies as a header string to be included in the request.
+    # This string is a semi-colon separated list of key-value pairs representing cookies.
+    header_cookies = "; ".join([f"{key}={value}" for key, value in session.cookies.items()])
 
-    This function submits the invite code to the website, handles the response,
-    and checks if the inmate details are present in the response. It includes retry logic
-    for handling intermittent failures.
-    """
-    logging.info(f"Entering invite code: {invite_code}")
-    logging.info(f"Session cookies before entering invite code: {dict(session.cookies)}")
+    # Define custom headers to be sent with the request to Splash.
+    headers = HEADERS_FOR_ACCEPT_INVITE
 
-    data = form_data.copy()
-    data.update({
-        'ctl00$topScriptManager': 'ctl00$topUpdatePanel|ctl00$mainContentPlaceHolder$PendingContactUC1$SearchButton',
-        '__EVENTTARGET': '',
-        '__EVENTARGUMENT': '',
-        'DES_Group': 'ADDINMATECONTROLGROUP',
-        'ctl00$mainContentPlaceHolder$PendingContactUC1$InmateNumberTextBox': invite_code,
-        '__ASYNCPOST': 'true',
-        'ctl00$mainContentPlaceHolder$PendingContactUC1$SearchButton': 'Go'
-    })
-
-    headers = session.headers.copy()
-    headers.update({
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'X-MicrosoftAjax': 'Delta=true',
-        'X-Requested-With': 'XMLHttpRequest'
-    })
-
-    log_request_info(CONTACT_URL, "POST", headers, data=data)
-    response = session.post(CONTACT_URL, data=data, headers=headers)
-    logging.info(f"Session cookies after entering invite code: {dict(session.cookies)}")
-    log_response_info(response)
-
-    # Save the HTML response to a file
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"invite_code_response_{timestamp}.html"
-    with open(filename, 'w', encoding='utf-8') as f:
-        f.write(response.text)
-    logging.info(f"Saved HTML response to {filename}")
-
-    # More detailed response parsing
-    soup = BeautifulSoup(response.text, 'html.parser')
-    main_content = soup.find('div', {'id': 'ctl00_mainContentPlaceHolder_mainPanel'})
-    if main_content:
-        logging.debug(f"Main content area: {main_content.text[:500]}")
-    else:
-        logging.warning("Main content area not found in response")
-
-    # Check for specific error messages
-    error_msg = soup.find('span', {'id': 'ctl00_mainContentPlaceHolder_PendingContactUC1_errorLabel'})
-    if error_msg and error_msg.text.strip():
-        logging.error(f"Error message found: {error_msg.text.strip()}")
-        return response, False
-
-    # Check for inmate details
-    inmate_name = soup.find('span', {'id': 'ctl00_mainContentPlaceHolder_PendingContactUC1_inmateNameDataLabel'})
-    inmate_number = soup.find('span', {'id': 'ctl00_mainContentPlaceHolder_PendingContactUC1_inmateNumberDataLabel'})
-
-    if inmate_name and inmate_number:
-        logging.info(f"Inmate details found: Name - {inmate_name.text.strip()}, Number - {inmate_number.text.strip()}")
-        return response, True
-    else:
-        logging.error("Inmate details not found in the response")
-        # Log a portion of the response for debugging
-        logging.debug(f"Response content: {response.text[:1000]}")
-
-        # Retry logic for intermittent failures
-        max_retries = 3
-        for attempt in range(max_retries):
-            logging.warning(f"Retrying invite code entry. Attempt {attempt + 1} of {max_retries}")
-            response = session.post(CONTACT_URL, data=data, headers=headers)
-            log_response_info(response)
-
-            # Check for inmate details again
-            soup = BeautifulSoup(response.text, 'html.parser')
-            inmate_name = soup.find('span', {'id': 'ctl00_mainContentPlaceHolder_PendingContactUC1_inmateNameDataLabel'})
-            inmate_number = soup.find('span', {'id': 'ctl00_mainContentPlaceHolder_PendingContactUC1_inmateNumberDataLabel'})
-
-            if inmate_name and inmate_number:
-                logging.info(f"Inmate details found on retry: Name - {inmate_name.text.strip()}, Number - {inmate_number.text.strip()}")
-                return response, True
-            time.sleep(2)  # Delay before next retry
-
-        return response, False
-
-def accept_invitation(session, form_data, invite_code):
-    """
-    Accepts an invitation on the Corrlinks website.
-    Parameters:
-    - session (requests.Session): The session object for making requests
-    - form_data (dict): The form data extracted from the page
-    - invite_code (str): The invite code of the invitation to accept
-
-    Returns:
-    - bool: True if the invitation was successfully accepted, False otherwise
-
-    This function submits the request to accept an invitation, handles the response,
-    and checks for confirmation of successful acceptance. It logs detailed information
-    about the request and response for debugging purposes.
-    """
-    logging.info("Accepting invitation")
-    
-    # Re-fetch the page to get the most up-to-date form data
-    response, updated_form_data = navigate_to_pending_contact(session)
-
-    # Extract necessary data from the updated form
-    viewstate = updated_form_data.get('__VIEWSTATE', '')
-    compressedviewstate = updated_form_data.get('__COMPRESSEDVIEWSTATE', '')
-    
-    # Prepare the data for the accept request
-    accept_data = {
-        '__EVENTTARGET': 'ctl00$mainContentPlaceHolder$PendingContactUC1$addInmateButton',
-        '__EVENTARGUMENT': '',
-        '__VIEWSTATE': viewstate,
-        '__COMPRESSEDVIEWSTATE': compressedviewstate,
-        'DES_Group': 'SEARCHRESULTGROUP',
-        'ctl00$mainContentPlaceHolder$PendingContactUC1$InmateNumberTextBox': invite_code,
+    # Set up the parameters for the POST request to the Splash service.
+    # These parameters include:
+    # - Lua script to be executed by Splash
+    # - URL of the page to navigate to
+    # - Formatted cookies and custom headers
+    # - IDs for HTML elements and the invitation code to be processed
+    params = {
+        'lua_source' : lua_script,
+        'url' : CONTACT_URL,
+        'splash_cookies' : splash_cookies,
+        'cookies' : header_cookies,
+        'headers' : headers,
+        'invite_code_box_id' : INVITATION_CODE_BOX_ID,
+        'invitation_code' : invitation_code,
+        'person_in_custody_information_div_id' : PERSON_IN_CUSTODY_INFORMATION_DIV_ID,
+        'invitation_code_go_button_id' : INVITATION_CODE_GO_BUTTON_ID,
+        'invitation_accept_button_id' : INVITATION_ACCEPT_BUTTON_ID,
+        'record_not_found_span_id' : RECORD_NOT_FOUND_SPAN_ID
     }
-    
-    # Add any other necessary form fields from updated_form_data
-    for key, value in updated_form_data.items():
-        if key not in accept_data:
-            accept_data[key] = value
+    max_retries = MAX_ACCEPT_INVITE_RETRIES
 
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Referer': 'https://www.corrlinks.com/PendingContact.aspx',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-MicrosoftAjax': 'Delta=true'
-    }
-    
-    # Ensure all necessary cookies are included
-    for cookie in session.cookies:
-        logging.info(f"Cookie being sent: {cookie.name}={cookie.value}")
+    for retry_number in range(max_retries):
+        # Send a POST request to the Splash service with the specified parameters.
+        # The Splash service renders the page and executes the Lua script provided.
+        response = session.post(SPLASH_URL, json=params)
+        result = response.json()
 
-    logging.info("Sending accept request")
-    log_request_info(CONTACT_URL, "POST", headers, data=accept_data)
-    response = session.post(CONTACT_URL, data=accept_data, headers=headers)
-    log_response_info(response)
-    
-    if response.status_code == 200:
-        if "Contact request accepted" in response.text:
-            logging.info("Invitation accepted successfully")
-            return True
+        # Retrieve the HTML content from the response if available.
+        # This HTML content can be useful for debugging or further processing.
+        page_html = result.get('html', None)
+        if not page_html == None:
+            # Log detailed response information for analysis.
+            # This includes status codes, HTML content, and any other relevant details.
+            log_response_info(response, is_splash_request=True)
+
+        
+        # Check if the invitation code was successfully processed.
+        # The `is_processed` flag indicates whether the code was handled correctly.
+        is_processed = result.get('is_processed', None)
+        if is_processed:
+            # If the invitation code was processed, connect to the email server.
+            # Use the `MailBox` class to manage email operations.
+            with MailBox(EMAIL0_USERNAME, EMAIL0_PASSWORD, EMAILURL0) as mailbox:
+                mailbox.get_inbox()
+                # Delete the email containing the invitation code to avoid reprocessing.
+                mailbox.delete_invite_email(email_id=email_id)
+
+        # Check if the expected HTML elements were found in the response.
+        # This helps in verifying if the form submission was successful.
+        element_found = result.get('element_found')
+        if element_found:
+            # Log success messages and additional details from the result.
+            # This provides insights into the processing outcome and any extra messages.
+            logging.info(f'Messages = {result['message']}\n. Extra Messages = {result['extra_messages']}')
+            return result
         else:
-            logging.warning("Unexpected response content. Manual verification needed.")
-            # Save the response content for debugging
-            with open('accept_response.html', 'w', encoding='utf-8') as f:
-                f.write(response.text)
-            logging.info("Response content saved to accept_response.html")
-            return False
-    else:
-        logging.error(f"Error accepting invitation: Status {response.status_code}")
-        return False
+            # If the request failed, log the failure and retry if necessary.
+            # Save the screenshot if available to help with debugging.
+            logging.info(f'Request failed for request number {retry_number +1}. Retrying ......')
+            logging.error(f'Error Message = {result['error_message']}\n. Extra Messages = {result['extra_messages']}')
+
+            # Break the loop if the invitation code was processed successfully.
+            if is_processed:
+                break
+    
+    # If all retry attempts fail, log an error message indicating the failure.
+    # This provides a clear indication that the function did not succeed after multiple attempts.
+    logging.error(f'Something went wrong in navigate_enter_code_accept_invite function. Check the logs above for more details.\n')
+    return None
+            
 
 def process_invitation():
     """
-    Processes an invitation from start to finish.
-    Returns:
-    - bool: True if the invitation was successfully processed, False otherwise
+    Processes an invitation from start to finish, handling the entire workflow from fetching 
+    the invitation code to accepting the invitation on Corrlinks.
 
-    This function orchestrates the entire invitation process. It fetches the invite code and name,
-    logs into Corrlinks, navigates to the pending contact page, enters the invite code,
-    and accepts the invitation. It handles session management and error logging throughout the process.
+    Returns:
+    - dict: A dictionary containing the results of processing each invitation code, with the invitation 
+            code as the key and the result message or status as the value.
+            - If successful, the value includes a success message and any additional information returned by the server.
+            - If unsuccessful, the value will be `None`.
+
+    This function orchestrates the invitation processing in several key steps:
+    1. **Fetching Invitation Codes**:
+        - Calls `fetch_invite_code_and_name()` to retrieve a dictionary of invitation codes, email IDs, and associated names.
+        - If no invitation codes are found or if an error occurs during fetching, it logs an error and returns `False`.
+    
+    2. **Logging into Corrlinks**:
+        - Initiates a session by calling `login_to_corrlinks()`.
+        - If the login fails, the function logs an error and returns `False`.
+        - Logs the session cookies after a successful login for debugging purposes.
+
+    3. **Loading the Lua Script**:
+        - Reads and loads a Lua script from a file, which is used by the Splash service to navigate and interact with the Corrlinks web page.
+
+    4. **Processing Each Invitation Code**:
+        - Iterates through each invitation code fetched earlier.
+        - Calls `navigate_enter_code_accept_invite()` to submit the invitation code, handle the web page interaction, and accept the invitation.
+        - Captures the response for each invite code:
+            - If successful, the response includes a success message, which is logged and added to the `response_dict`.
+            - If unsuccessful or if the request fails, logs the failure and stores `None` in `response_dict` for that code.
+
+    5. **Returning the Results**:
+        - Returns `response_dict`, which contains the processing results for each invitation code. 
+          This allows the caller to check which invitations were successfully processed and which were not.
+
+    Usage:
+    - This function is designed to automate the process of handling invitations on Corrlinks, 
+      including logging in, navigating to the relevant page, submitting the invitation code, and 
+      accepting the invitation. It ensures that each step is logged and that errors are appropriately handled.
+    - The function returns a dictionary that can be used to verify the outcome of each invitation code processed, 
+      providing both success messages and error states.
     """
-    invite_code, email_id, full_name = fetch_invite_code_and_name()
-    if not invite_code:
+
+    # Step 1: Fetch invitation codes and associated email addresses.
+    # This function should return a dictionary where keys are invitation codes and values are tuples (or lists)
+    # with email addresses and possibly other relevant data.
+    invite_codes_dict = fetch_invite_code_and_name()
+    if not invite_codes_dict or invite_codes_dict == {}:
         logging.error("Failed to fetch invite code")
         return False
 
+    # Step 2: Log in to Corrlinks to get a session.
+    # This function should return a session object that includes cookies for authenticated requests.
     session = login_to_corrlinks()
     if not session:
+        # If login fails, log an error and exit the function with a failure indicator.
         logging.error("Failed to login to Corrlinks")
         return False
 
+    # Log the session cookies for debugging purposes.
     logging.info(f"Session cookies after login: {dict(session.cookies)}")
 
-    response, form_data = navigate_to_pending_contact(session)
-    if response is None or form_data is None:
-        logging.error("Failed to navigate to Pending Contact page or session expired")
-        return False
+    # Step 3: Read the Lua script from a file.
+    # The Lua script is necessary for interacting with the web application via Splash (a headless browser).
+    with open('utils/lua_scripts/navigate_enter_code_accept_invite.lua', 'r') as file:
+        lua_script = file.read()
 
-    time.sleep(2)
+    # Dictionary to store the results of processing each invitation code.
+    response_dict = {}
+    # Step 4: Iterate over each invitation code and associated email address.
+    for invite_code, value in invite_codes_dict.items():
+        email_id = value[1]
 
-    response, invite_code_entered = enter_invite_code(session, form_data, invite_code)
-    if not invite_code_entered:
-        logging.error("Failed to enter invite code or invite code not recognized")
-        return False
-
-    logging.info(f"Session cookies after entering invite code: {dict(session.cookies)}")
-
-    time.sleep(2)
-    
-    max_retries = 3
-    for attempt in range(max_retries):
-        response, invite_code_entered = enter_invite_code(session, form_data, invite_code)
-        if invite_code_entered:
-            break
-        logging.warning(f"Attempt {attempt + 1} failed. Retrying...")
-        time.sleep(2)  # Wait before retrying
-
-    if not invite_code_entered:
-        logging.error("Failed to enter invite code after multiple attempts")
-        return False
-
-    success = accept_invitation(session, form_data, invite_code)
-    if success:
-        delete_invite_email(email_id)
-        logging.info(f"Successfully processed invitation for {full_name}")
-        return True
-    else:
-        logging.error(f"Failed to accept invitation for {full_name}")
-        return False
-    
-def delete_invite_email(email_id):
-    """
-    Deletes the invite email after successful processing.
-    Parameters:
-    - email_id (str): The ID of the email to delete
-
-    This function connects to the email server, marks the specified email for deletion,
-    and permanently removes it. It's called after an invitation has been successfully processed
-    to clean up the inbox.
-    """
-    try:
-        # Connect to the server
-        mail = imaplib.IMAP4_SSL(EMAILURL0)
-        # Login to your account
-        mail.login(EMAIL0_USERNAME, EMAIL0_PASSWORD)
-        # Select the mailbox you want to use
-        mail.select("inbox")
-        # Mark the specific email for deletion
-        mail.store(email_id, '+FLAGS', '\\Deleted')
-        # Permanently remove emails marked for deletion
-        mail.expunge()
-        logging.info(f"Successfully deleted invite email with ID: {email_id}")
-    except Exception as e:
-        logging.error(f"Failed to delete invite email: {str(e)}")
-    finally:
-        mail.logout()
+        # Call the function to navigate, enter the invitation code, and accept the invitation.
+        # This function will interact with the web application using the provided session and Lua script.
+        response_value = navigate_enter_code_accept_invite(session=session, invitation_code=invite_code, email_id=email_id, lua_script=lua_script)
         
+        # Check if the response is not None and update the message accordingly.
+        if not response_value == None:
+            message = f'Invite code {invite_code} processed successfuly.'
+            message = message + response_value.get('message')
+            logging.info(f'Output for {invite_code} = {response_value}')
+            response_dict[invite_code] = message
+        else:
+            # Log the response for debugging if the result is None.
+            logging.info(f'Output for {invite_code} = {response_value}')
+            response_dict[invite_code] = response_value
+
+    # Step 5: Return the dictionary containing the results for each invitation code.
+    # The dictionary will have invitation codes as keys and result messages as values.
+    return response_dict
+
+
 if __name__ == "__main__":
     result = process_invitation()
     print("Invitation processing result:", result)
