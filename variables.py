@@ -60,7 +60,8 @@ DB_SETTINGS = {
         "host": "localhost",
         "user": "postgres",
         "password": "123",
-        "database": "contxt"
+        "database": "contxt",
+        "options": "-c search_path=dbo"
     },
     "default" : {
         "DB_IP": DB_IP,
@@ -71,7 +72,7 @@ DB_SETTINGS = {
     }
 }
 
-DB_TYPE = 'mssql'
+DB_TYPE = 'postgres'
 ENVIRONMENT = 'DEV'
 
 # SMS Auth

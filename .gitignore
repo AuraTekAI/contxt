@@ -374,3 +374,5 @@ env/
 # Database config
 database.ini
 
+# .env
+.env
