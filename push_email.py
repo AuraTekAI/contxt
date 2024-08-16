@@ -194,7 +194,7 @@ def run_push_email():
     if ENVIRONMENT == 'TEST':
         message_id = "3728844321"
         message_content = "This is a test reply message. Please ignore these messages. Appologies for any inconvenience."
-        message_id_content.append([message_id, message_content])
+        message_id_content.append([None, message_id, message_content])
     else:
         message_id_content = get_sms_replies_for_send_email(message_id_content=message_id_content)
 
