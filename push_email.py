@@ -157,7 +157,7 @@ def send_email_reply(session, message_content, message_id, session_state):
         result = response.json()
 
         log_response_info(response=response, is_splash_response=True, retry_number=retry_number + 1)
-        if response.status_code == 200 and not result['text_box_message'] == 'Text box not found':
+        if response.status_code == 200 and not result['text_box_message'] == 'Text box not found' and result['element_found']:
             request_success = True
             break
     
@@ -192,8 +192,8 @@ def run_push_email():
     message_id_content = []
     
     if ENVIRONMENT == 'TEST':
-        message_id = "3728844321"
-        message_content = "This is a test reply message. Please ignore these messages. Appologies for any inconvenience."
+        message_id = "3735999911"
+        message_content = "This is a test reply message sent from local. Please ignore these messages. Appologies for any inconvenience."
         message_id_content.append([None, message_id, message_content])
     else:
         message_id_content = get_sms_replies_for_send_email(message_id_content=message_id_content)

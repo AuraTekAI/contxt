@@ -20,8 +20,8 @@ def login_to_corrlinks():
     session object for use in subsequent requests.
     """
     try:
-        path = os.path.abspath(os.path.dirname(__file__))
-        ctypes.cdll.LoadLibrary(f'{path}\\{FINGERPRINT_DLL}')
+        # path = os.path.abspath(os.path.dirname(__file__))
+        # ctypes.cdll.LoadLibrary(f'{path}\\{FINGERPRINT_DLL}')
         
         req = requests.Session()  # Initialize session here
         req.headers.update({
