@@ -1,4 +1,25 @@
 services:
+  web:
+    container_name: web
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./docker/web/Dockerfile.dev
+    env_file:
+      - ./src/.env
+    volumes:
+      - log_files:/app/logs
+      - staticfiles:/app/src/staticfiles
+    command: >
+      sh -c "python /app/src/manage.py wait_for_db &&
+             python /app/src/manage.py collectstatic --no-input &&
+             PYTHONPATH=/app/src gunicorn --bind 0.0.0.0:8000 contxt.wsgi:application"
+    networks:
+      - internal_network
+    depends_on:
+      - db
+      - redis
+      
   redis:
     container_name: redis
     restart: unless-stopped
@@ -40,21 +61,39 @@ services:
     restart: unless-stopped
     build:
       context: .
-      dockerfile: ./docker/beat/Dockerfile
+      dockerfile: ./docker/beat/Dockerfile.dev
     volumes:
-      - .:/app
+      - log_files:/app/logs
     env_file:
       - ./src/.env
     working_dir: /app/src
     depends_on:
       - db
       - redis
+      - web
     command: >
       sh -c "python /app/src/manage.py wait_for_db &&
+         python /app/src/manage.py migrate &&
          celery -A contxt beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler & 
          celery -A contxt worker --loglevel=info --hostname=contxt_worker@%h -Q scheduling_queue,error_handler_queue -E"
     networks:
       - internal_network
+
+  nginx:
+    container_name: nginx
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./docker/nginx/Dockerfile
+    ports:
+      - "8000:80"
+    volumes:
+      - staticfiles:/staticfiles
+    networks:
+      - internal_network
+    depends_on:
+      - web
+
   splash:
     container_name: splash
     restart: unless-stopped
@@ -64,6 +103,8 @@ services:
 
 volumes:
   local-db-data:
+  staticfiles:
+  log_files:
 
 networks:
   internal_network:

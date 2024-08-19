@@ -78,6 +78,13 @@ services:
          celery -A contxt worker --loglevel=info --hostname=contxt_worker@%h -Q scheduling_queue,error_handler_queue -E"
     networks:
       - internal_network
+  
+  splash:
+    container_name: splash
+    restart: unless-stopped
+    image: scrapinghub/splash:latest
+    ports:
+      - "8050:8050"
 
 volumes:
   local-db-data:

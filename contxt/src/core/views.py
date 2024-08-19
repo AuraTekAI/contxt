@@ -16,3 +16,6 @@ def cache_test(request):
     payload=payload
 
     return JsonResponse({'message' : payload, 'time_to_live' : time_to_live})
+
+def test_home(request):
+    return render(request, 'index.html', {})
