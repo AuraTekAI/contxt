@@ -21,3 +21,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path('core/', include('core.urls'))
 ]
+
+admin.site.site_header = 'ConTXT'
+admin.site.site_title = 'ConTXT'

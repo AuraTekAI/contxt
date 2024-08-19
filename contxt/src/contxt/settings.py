@@ -16,19 +16,12 @@ if not env_file_path.exists():
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'), overwrite=True)
 
 
-
-SECRET_KEY = env("SECRET_KEY")
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DEBUG")
 if DEBUG == 'True':
     DEBUG = True
 else:
     DEBUG = False
-
-
-
-ALLOWED_HOSTS = env('ALLOWED_HOSTS').split(',')
 
 
 # Application definition
@@ -43,6 +36,7 @@ INSTALLED_APPS = [
 
     # User defined apps
     "core",
+    "accounts",
 
     # Third part apps
     "django_celery_beat",
@@ -147,16 +141,7 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-ENVIRONMENT = env("ENVIRONMENT")
-
-CELERY_BROKER_URL = env('CELERY_BROKER_URL')
-CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND')
-
-CELERY_TIMEZONE = env('CELERY_TIMEZONE')
-TIME_ZONE = "UTC"
-
 PARENT_DIR = os.path.dirname(BASE_DIR)
-
 LOG_DIR = os.path.join(PARENT_DIR, 'logs')
 
 if not os.path.exists(LOG_DIR):
@@ -207,3 +192,17 @@ LOGGING = {
         }
     } 
 }
+
+AUTH_USER_MODEL = 'accounts.User'
+
+ALLOWED_HOSTS = env('ALLOWED_HOSTS').split(',')
+
+SECRET_KEY = env("SECRET_KEY")
+
+ENVIRONMENT = env("ENVIRONMENT")
+
+CELERY_BROKER_URL = env('CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND')
+
+CELERY_TIMEZONE = env('CELERY_TIMEZONE')
+TIME_ZONE = "UTC"
