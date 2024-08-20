@@ -41,10 +41,10 @@ def login_to_corrlinks():
             req.proxies = {'http': settings.PROXY_URL, 'https': settings.PROXY_URL}
         else:
             logger.info('Continue Without Proxies.')
-            
+
         req.impersonate = 'chrome'
         req.base_url = settings.BASE_URL
-    
+
         # Verify IP masking by checking the external IP
         http_ip_response = req.get(settings.HTTPBIN_IP_URL_HTTP)
         logger.info(f'http {http_ip_response.json()['origin']}')
@@ -60,7 +60,7 @@ def login_to_corrlinks():
             logger.error("Login Page not feteched. Failed. Retrying ........")
             req.headers.clear()
             req.cookies.clear()
-    
+
         # Parse hidden fields and update data
         soup = LexborHTMLParser(r.content)
         data = {
@@ -71,16 +71,16 @@ def login_to_corrlinks():
         data.update({x.attrs['name']: x.attrs['value'] for x in soup.css('input[type="hidden"]')})
         form = MultipartEncoder(fields=data)
         req.headers.update({'Content-Type': form.content_type})
-        
+
         r = req.post(settings.LOGIN_PAGE, data=form.to_string())
-        
+
         logger.info(f"Login attempt response: STATUS CODE = {r.status_code}")
         if r.status_code == 200:
             return req
         else:
             logger.error("Login attempt failed. Returning None.")
             return None
-        
+
     except Exception as e:
         logger.error(f"An error occurred during login: {e}")
         return None

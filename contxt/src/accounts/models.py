@@ -74,7 +74,7 @@ class CustomAccountManager(BaseUserManager):
         user.save(using=self._db)
 
         return user
-    
+
 
 class User(AbstractBaseUser, PermissionsMixin):
     name = models.CharField(max_length=255)
@@ -90,14 +90,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     sms_left = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0.0)
     custom_name = models.CharField(max_length=100, null=True, blank=True)
     extra_sms = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
-    
+
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     objects = CustomAccountManager()
-    
+
     USERNAME_FIELD = "user_name"
     REQUIRED_FIELDS = ["name"]
 

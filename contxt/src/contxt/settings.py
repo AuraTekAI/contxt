@@ -216,7 +216,7 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False
         }
-    } 
+    }
 }
 
 AUTH_USER_MODEL = 'accounts.User'

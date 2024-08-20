@@ -19,7 +19,7 @@ services:
     depends_on:
       - db
       - redis
-      
+
   redis:
     container_name: redis
     restart: unless-stopped
@@ -28,7 +28,7 @@ services:
       - "6379:6379"
     command: redis-server --databases 2
     healthcheck:
-      test: 
+      test:
         - CMD
         - redis-cli
         - ping
@@ -74,7 +74,7 @@ services:
     command: >
       sh -c "python /app/src/manage.py wait_for_db &&
          python /app/src/manage.py migrate &&
-         celery -A contxt beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler & 
+         celery -A contxt beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler &
          celery -A contxt worker --loglevel=info --hostname=contxt_worker@%h -Q scheduling_queue,error_handler_queue -E"
     networks:
       - internal_network
