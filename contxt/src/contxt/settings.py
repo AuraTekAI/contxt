@@ -197,6 +197,12 @@ LOGGING = {
             'filename': os.path.join(LOG_DIR, 'pull_email.log'),
             'formatter': 'verbose'
         },
+        'push_email_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'push_email.log'),
+            'formatter': 'verbose'
+        },
     },
     'loggers': {
         'django': {
@@ -216,6 +222,11 @@ LOGGING = {
         },
         'pull_email': {
             'handlers': ['console', 'pull_email_file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+        'push_email': {
+            'handlers': ['console', 'push_email_file'],
             'level': 'DEBUG',
             'propagate': False
         }
