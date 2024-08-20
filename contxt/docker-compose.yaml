@@ -13,7 +13,6 @@ services:
       - ./src/.env
     command: >
       sh -c "python /app/src/manage.py wait_for_db &&
-             python /app/src/manage.py migrate &&
              python /app/src/manage.py runserver 0.0.0.0:8000"
     networks:
       - internal_network
@@ -74,6 +73,7 @@ services:
       - web
     command: >
       sh -c "python /app/src/manage.py wait_for_db &&
+         python /app/src/manage.py migrate &&
          celery -A contxt beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler & 
          celery -A contxt worker --loglevel=info --hostname=contxt_worker@%h -Q scheduling_queue,error_handler_queue -E"
     networks:

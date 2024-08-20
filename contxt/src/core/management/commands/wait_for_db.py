@@ -27,7 +27,8 @@ class Command(BaseCommand):
                 )
                 time.sleep(poll_seconds)
             else:
+                self.stdout.write("Database connected successfully. ")
                 break
         else:
-            self.stdout.write(self.style.ERROR("Databse unavailable. Check the logs above for more information"))
+            self.stdout.write(self.style.ERROR("Database unavailable. Check the logs above for more information"))
             sys.exit(1)

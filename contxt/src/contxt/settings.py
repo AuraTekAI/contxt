@@ -182,6 +182,18 @@ LOGGING = {
             'filename': os.path.join(LOG_DIR, 'celery.log'),
             'formatter': 'verbose'
         },
+        'login_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'login.log'),
+            'formatter': 'verbose'
+        },
+        'pull_email_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'pull_email.log'),
+            'formatter': 'verbose'
+        },
     },
     'loggers': {
         'django': {
@@ -190,9 +202,19 @@ LOGGING = {
             'propagate': True,
         },
         'celery': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console', 'celery_file'],
             'level': 'DEBUG',
-            'propogate': True
+            'propagate': True
+        },
+        'login': {
+            'handlers': ['console', 'login_file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+        'pull_email': {
+            'handlers': ['console', 'pull_email_file'],
+            'level': 'DEBUG',
+            'propagate': False
         }
     } 
 }
@@ -210,3 +232,25 @@ CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND')
 
 CELERY_TIMEZONE = env('CELERY_TIMEZONE')
 TIME_ZONE = "UTC"
+
+
+USERNAME = env('USERNAME')
+PASSWORD = env('PASSWORD')
+LOGIN_BUTTON_TEXT = env('LOGIN_BUTTON_TEXT')
+LOGIN_PAGE = env('LOGIN_PAGE')
+LOGIN_EMAIL_FIELD_ID=env('LOGIN_EMAIL_FIELD_ID')
+LOGIN_PASSWORD_FIELD_ID=env('LOGIN_PASSWORD_FIELD_ID')
+LOGIN_BUTTON_ID=env('LOGIN_BUTTON_ID')
+
+USE_PROXY = env('USE_PROXY')
+if USE_PROXY == 'True' or USE_PROXY == 'true':
+    USE_PROXY = True
+else:
+    USE_PROXY = False
+
+PROXY_URL = env('PROXY_URL')
+
+BASE_URL = env('BASE_URL')
+INBOX_PAGE = env('INBOX_PAGE')
+HTTPBIN_IP_URL_HTTP = env('HTTPBIN_IP_URL_HTTP')
+HTTPBIN_IP_URL_HTTPS = env('HTTPBIN_IP_URL_HTTPS')
