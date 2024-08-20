@@ -371,6 +371,9 @@ env/
 # Ignoring test result files
 *.html
 
+# Exclude HTML files in the templates directory and all its subdirectories
+!**/templates/**/*.html
+
 # Database config
 database.ini
 
