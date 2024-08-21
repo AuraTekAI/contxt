@@ -1,15 +1,16 @@
+
+from accounts.login_service import SessionManager
+from process_emails.utils import convert_cookies_to_splash_format, get_messages_to_send_from_database, update_sms_processed_value
+from contxt.utils.helper_functions import save_screenshots_to_local, get_lua_script_absolute_path
+
+from django.core.management.base import BaseCommand
+from django.conf import settings
+
 import logging
 import json
-from django.core.management.base import BaseCommand
+import sys
 
-from login import login_to_corrlinks
-from variables import MAX_EMAIL_REPLY_RETRIES, HEADERS_FOR_PUSH_EMAIL_REQUEST, SPLASH_URL, ENVIRONMENT
-from utils.helper_functions import convert_cookies_to_splash_format, get_sms_replies_for_send_email, update_sms_processed_status
-
-STATIC_COOKIES = {
-    '__cflb': '02DiuJS4Qt1fYJgjizGYDpBdpvG3kZuePiK6aACa2VVk8',
-    'cf_clearance': 'NVzVrHA955EqW3BWDz88iyjl3C9DgxYunr5aA39Ime0-1720556066-1.0.1.1-iRuayH1JZaLN0s7CorH6YLiiL6473CYJDarLnx57PclIoO3rJL1j_WVDVTzRamuBzuDeGSzZA8Hf4rj2BVzjZg'
-}
+STATIC_COOKIES = settings.STATIC_COOKIES
 
 logger = logging.getLogger('push_email')
 
@@ -17,7 +18,11 @@ class Command(BaseCommand):
     help = 'Run the push email process to send replies.'
 
     def handle(self, *args, **kwargs):
-        self.run_push_email()
+        session = SessionManager.get_session()
+        if not session:
+            logger.error("Failed to retrieve session.")
+            return
+        self.run_push_email(session=session)
 
     def capture_session_state(self, session):
         state = {
@@ -27,11 +32,6 @@ class Command(BaseCommand):
         logger.info("Captured session state:")
         logger.info(json.dumps(state, indent=2))
         return state
-
-    def update_session_state(self, session, state):
-        session.headers.update(state['headers'])
-        session.cookies.update(state['cookies'])
-        session.cookies.update(STATIC_COOKIES)
 
     def log_response_info(self, response, is_splash_response=False, retry_number=0):
         logger.info(f"=== RESPONSE INFO ===")
@@ -58,9 +58,10 @@ class Command(BaseCommand):
     def send_email_reply(self, session, message_content, message_id, session_state):
         reply_url = f"https://www.corrlinks.com/NewMessage.aspx?messageId={message_id}&type=reply"
 
-        with open('utils/lua_scripts/send_email_reply.lua', 'r') as file:
+        lua_script_path = get_lua_script_absolute_path(relative_path='lua_scripts/send_email_reply.lua')
+        with open(lua_script_path, 'r') as file:
             lua_script = file.read()
-        headers = HEADERS_FOR_PUSH_EMAIL_REQUEST
+        headers = settings.HEADERS_FOR_PUSH_EMAIL_REQUEST
         cookies = session_state['cookies']
 
         splash_cookies = []
@@ -83,11 +84,22 @@ class Command(BaseCommand):
 
         result = None
         request_success = False
-        for retry_number in range(MAX_EMAIL_REPLY_RETRIES):
-            response = session.post(SPLASH_URL, json=params)
+        for retry_number in range(settings.MAX_EMAIL_REPLY_RETRIES):
+            response = session.post(settings.SPLASH_URL, json=params)
             result = response.json()
 
-            self.log_response_info(response=response, is_splash_response=True, retry_number=retry_number + 1)
+            if not settings.TEST_MODE :
+                result.pop('html', None)
+            logger.info(f'Request results = {result}')
+
+            if settings.TEST_MODE:
+                """
+                For saving screenshots to local for debugging,
+                please make sure they have word screenshot in their key value.
+                """
+                save_screenshots_to_local(result=result, logger_name=logger.name)
+                self.log_response_info(response=response, is_splash_response=True, retry_number=retry_number + 1)
+
             if response.status_code == 200 and result['element_found'] and result['text_box_message'] != 'Text box not found':
                 request_success = True
                 break
@@ -101,24 +113,22 @@ class Command(BaseCommand):
         logger.error('----------------------------------')
         return False
 
-    def run_push_email(self):
+    def run_push_email(self, session=None):
+        if session == None:
+            logger.error('Missing session information. Maybe there was an error in login ?')
+            sys.exit(1)
         message_id_content = []
 
-        if ENVIRONMENT == 'TEST':
+        if settings.TEST_MODE == True:
             message_id = "3735999911"
             message_content = "This is a test reply message sent from local. Please ignore these messages. Apologies for any inconvenience."
             message_id_content.append([None, message_id, message_content])
         else:
-            message_id_content = get_sms_replies_for_send_email(message_id_content=message_id_content)
+            message_id_content = get_messages_to_send_from_database(message_id_content=message_id_content)
 
         if not message_id_content:
             logger.info('No SMS messages found to process at the moment.')
             return "No SMS messages found to process at the moment."
-
-        session = login_to_corrlinks()
-        if not session:
-            logger.error("Failed to login to Corrlinks")
-            return "Failed to login to Corrlinks"
 
         session_state = self.capture_session_state(session)
 
@@ -130,14 +140,14 @@ class Command(BaseCommand):
                 continue
 
             if success:
-                if ENVIRONMENT != 'TEST':
-                    status = update_sms_processed_status(sms_id=sms_id)
+                if not settings.TEST_MODE == True:
+                    status = update_sms_processed_value(sms_id=sms_id)
                     if status:
                         logger.info('SMS processed value updated successfully.')
                     else:
                         logger.error('An error occurred while updating SMS processed value.')
                 logger.info(f"Email reply sent successfully  sms_id = {sms_id} message_id = {message_id}")
             else:
-                logger.error(f"Failed to send email reply. sms_id = {sms_id} message_id = {message_id}. Check push_email_interaction.log for details.")
-        return "Push email operation completed. Check push_email_interaction.log for details."
+                logger.error(f"Failed to send email reply. sms_id = {sms_id} message_id = {message_id}. Check {logger.name}.log for details.")
+        return f"Push email operation completed. Check {logger.name}.log for details."
 

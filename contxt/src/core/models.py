@@ -1,7 +1,7 @@
 
 from accounts.models import User
 from process_emails.models import Email
-from utils.constants import *
+from contxt.utils.constants import *
 
 from django.db import models
 

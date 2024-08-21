@@ -5,7 +5,6 @@ from process_emails.utils import save_emails
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from django.core.management import call_command
 
 from selectolax.lexbor import LexborHTMLParser
 from requests_toolbelt import MultipartEncoder

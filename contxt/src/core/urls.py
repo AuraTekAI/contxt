@@ -5,7 +5,7 @@ from core.views import cache_test, test_home
 
 
 urlpatterns = [
-    path('', test_home, name='test-home'),
+    path('', test_home, name='test-home'), # TODO Move this to test urls
 ]
-if settings.ENVIRONMENT == 'LOCAL':
+if settings.TEST_MODE == True:
     urlpatterns.append(path('cache/', cache_test, name='cache-test'),)
