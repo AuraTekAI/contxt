@@ -88,8 +88,17 @@ ctypes.cdll.LoadLibrary(f'{path}\\{FINGERPRINT_DLL}')
 
 ```
 
-## Splash
+## Run docker version:
 
-Also for running splash on local for testing make sure that you have docker and docker compose installed on your system. Run the below command at the root level of the code base:
+Also for running docker version on local for testing make sure that you have docker and docker compose installed on your system. Run the below command inside `ConTXT/contxt` directory:
 
 `docker compose up -d --build`
+
+You will only need to run the above command if you are running the project for the first time. After that `docker compose up -d` for starting and `docker compose down` for stopping the containers.
+
+- You should be able to access the web interface at `localhost:8000/admin`.
+- To create a user for testing the web interface, run the below command and follow the prompts:
+    - `docker exec -it web python src/manage.py createsuperuser`
+- To run the different modules individually, these commands should be run:
+    - `docker exec -it web python src/manage.py pull_emails`
+    - `docker exec -it web python src/manage.py push_emails`

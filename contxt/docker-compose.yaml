@@ -85,6 +85,8 @@ services:
     image: scrapinghub/splash:latest
     ports:
       - "8050:8050"
+    networks:
+      - internal_network
 
 volumes:
   local-db-data:

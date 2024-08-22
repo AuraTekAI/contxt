@@ -31,43 +31,54 @@ class Command(BaseCommand):
 
         if created:
             self.stdout.write(self.style.SUCCESS('Created user with pic_number 15372010.'))
+
+            if not Contact.objects.filter(user=user).all():
+                contact, contact_created = Contact.objects.get_or_create(
+                    user=user,
+                    defaults={
+                        'contact_name': f'Contact for {user.name}',
+                        'phone_number': f'+3731234568',
+                        'email': f'{user.user_name}@example.com' if user.custom_email is None else user.custom_email,
+                    }
+                )
+
+                if contact_created:
+                    self.stdout.write(self.style.SUCCESS(f'Created contact for user {user.name}.'))
+                else:
+                    self.stdout.write(self.style.WARNING(f'Contact for user {user.name} already exists.'))
+
+            for message_id in SMS_TABLE_SEED_DATA.keys():
+                email = Email.objects.create(
+                    user=user,
+                    message_id=message_id,
+                    sent_date_time=timezone.now(),
+                    subject=f'Subject {message_id}',
+                    body=f'Body content for {message_id}',
+                    is_processed=False
+                )
+
+                SMS.objects.create(
+                    contact=contact,
+                    email=email,
+                    message=f'This is a test message for {message_id} sent from {settings.ENVIRONMENT}',
+                    text_id=f'text-{message_id}',
+                    phone_number=f'+373{message_id[-7:]}',
+                    direction='Inbound',
+                    status='Sent',
+                    is_processed=False
+                )
+
+            self.stdout.write(self.style.SUCCESS('Successfully seeded DB with data.'))
         else:
             self.stdout.write(self.style.WARNING('User with pic_number 15372010 already exists.'))
 
-        if not Contact.objects.filter(user=user).all():
-            contact, contact_created = Contact.objects.get_or_create(
-                user=user,
-                defaults={
-                    'contact_name': f'Contact for {user.name}',
-                    'phone_number': f'+3731234568',
-                    'email': f'{user.user_name}@example.com' if user.custom_email is None else user.custom_email,
-                }
-            )
+            all_email_for_user = Email.objects.filter(user=user).all()
+            for email in all_email_for_user:
+                email.is_processed = False
+                email.save()
 
-            if contact_created:
-                self.stdout.write(self.style.SUCCESS(f'Created contact for user {user.name}.'))
-            else:
-                self.stdout.write(self.style.WARNING(f'Contact for user {user.name} already exists.'))
+            self.stdout.write(self.style.SUCCESS('Changed all emails is_processed for User to False'))
 
-        for message_id in SMS_TABLE_SEED_DATA.keys():
-            email = Email.objects.create(
-                user=user,
-                message_id=message_id,
-                sent_date_time=timezone.now(),
-                subject=f'Subject {message_id}',
-                body=f'Body content for {message_id}',
-                is_processed=False
-            )
 
-            SMS.objects.create(
-                contact=contact,
-                email=email,
-                message=f'This is a test message for {message_id} sent from {settings.ENVIRONMENT}',
-                text_id=f'text-{message_id}',
-                phone_number=f'+373{message_id[-7:]}',
-                direction='Inbound',
-                status='Sent',
-                is_processed=False
-            )
 
-        self.stdout.write(self.style.SUCCESS('Successfully seeded DB with data.'))
+
