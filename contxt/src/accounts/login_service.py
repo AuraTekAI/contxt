@@ -1,4 +1,6 @@
 
+from accounts.utils import get_username_password
+
 from django.conf import settings
 
 from curl_cffi import requests
@@ -21,6 +23,7 @@ class SessionManager:
     @classmethod
     def _login_to_corrlinks(cls):
         try:
+            user_name , password = get_username_password()
             req = requests.Session()
             req.headers.update({
                 'User-Agent': settings.LOGIN_REQUEST_HEADER
@@ -54,8 +57,8 @@ class SessionManager:
             # Parse hidden fields and update data
             soup = LexborHTMLParser(r.content)
             data = {
-                settings.LOGIN_EMAIL_FIELD_ID: settings.USERNAME,
-                settings.LOGIN_PASSWORD_FIELD_ID: settings.PASSWORD,
+                settings.LOGIN_EMAIL_FIELD_ID: user_name,
+                settings.LOGIN_PASSWORD_FIELD_ID: password,
                 settings.LOGIN_BUTTON_ID: settings.LOGIN_BUTTON_TEXT
             }
             data.update({x.attrs['name']: x.attrs['value'] for x in soup.css('input[type="hidden"]')})

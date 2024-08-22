@@ -43,3 +43,26 @@ def get_or_create_user(email_data=None):
         user.save()
 
     return user
+
+def get_email_password_url():
+    if settings.USE_ALTERNATE_EMAIL:
+        user_name = settings.ALTERNATE_EMAIL_USERNAME
+        password = settings.ALTERNATE_EMAIL_PASSWORD
+        email_Url = settings.ALTERNATE_EMIALURL
+    else:
+        user_name = settings.EMAIL_USERNAME
+        password = settings.EMAIL_PASSWORD
+        email_Url = settings.EMAILURL
+
+    return [user_name, password, email_Url]
+
+def get_username_password():
+    if settings.USE_ALTERNATE_LOGIN_DETAILS:
+        user_name = settings.ALTERNATE_USERNAME
+        password = settings.ALTERNATE_PASSWORD
+    else:
+        user_name = settings.USERNAME
+        password = settings.PASSWORD
+
+    return [user_name, password]
+

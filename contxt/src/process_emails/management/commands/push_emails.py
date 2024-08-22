@@ -147,7 +147,9 @@ class Command(BaseCommand):
                     else:
                         logger.error('An error occurred while updating SMS processed value.')
                 logger.info(f"Email reply sent successfully  sms_id = {sms_id} message_id = {message_id}")
+                logger.info("------------------------------------------------------")
             else:
                 logger.error(f"Failed to send email reply. sms_id = {sms_id} message_id = {message_id}. Check {logger.name}.log for details.")
+                logger.info("------------------------------------------------------")
         return f"Push email operation completed. Check {logger.name}.log for details."
 

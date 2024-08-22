@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "core",
     "accounts",
     "process_emails",
+    "sms_app",
 
     # Third part apps
     "django_celery_beat",
@@ -203,6 +204,24 @@ LOGGING = {
             'filename': os.path.join(LOG_DIR, 'push_email.log'),
             'formatter': 'verbose'
         },
+        'mail_box_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'mail_box.log'),
+            'formatter': 'verbose'
+        },
+        'accept_invite_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'accept_invite.log'),
+            'formatter': 'verbose'
+        },
+        'send_sms_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'send_sms.log'),
+            'formatter': 'verbose'
+        },
     },
     'loggers': {
         'django': {
@@ -229,6 +248,21 @@ LOGGING = {
             'handlers': ['console', 'push_email_file'],
             'level': 'DEBUG',
             'propagate': False
+        },
+        'mail_box': {
+            'handlers': ['console', 'mail_box_file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+        'accpet_invite': {
+            'handlers': ['console', 'accept_invite_file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+        'send_sms': {
+            'handlers': ['console', 'send_sms_file'],
+            'level': 'DEBUG',
+            'propagate': False
         }
     }
 }
@@ -253,6 +287,14 @@ CELERY_TIMEZONE = env('CELERY_TIMEZONE')
 TIME_ZONE = "UTC"
 
 
+USE_ALTERNATE_LOGIN_DETAILS = env('USE_ALTERNATE_LOGIN_DETAILS')
+if USE_ALTERNATE_LOGIN_DETAILS == 'True' or USE_ALTERNATE_LOGIN_DETAILS == 'true':
+    USE_ALTERNATE_LOGIN_DETAILS = True
+else:
+    USE_ALTERNATE_LOGIN_DETAILS = False
+
+ALTERNATE_USERNAME = env('ALTERNATE_USERNAME')
+ALTERNATE_PASSWORD = env('ALTERNATE_PASSWORD')
 USERNAME = env('USERNAME')
 PASSWORD = env('PASSWORD')
 LOGIN_REQUEST_HEADER = env('LOGIN_REQUEST_HEADER')
@@ -276,6 +318,8 @@ INBOX_PAGE = env('INBOX_PAGE')
 HTTPBIN_IP_URL_HTTP = env('HTTPBIN_IP_URL_HTTP')
 HTTPBIN_IP_URL_HTTPS = env('HTTPBIN_IP_URL_HTTPS')
 INBOX_URL = env('INBOX_URL')
+SPLASH_URL = env('SPLASH_URL')
+CONTACT_URL = env('CONTACT_URL')
 
 PULL_EMAIL_REQUEST_HEADERS = json.loads(env('PULL_EMAIL_REQUEST_HEADERS'))
 COMPRESSED_VIEWSTATE_ID = env('COMPRESSED_VIEWSTATE_ID')
@@ -288,6 +332,29 @@ ASYNCPOST = env('ASYNCPOST')
 TOPSCRIPTMANAGER = env('TOPSCRIPTMANAGER')
 
 HEADERS_FOR_PUSH_EMAIL_REQUEST = json.loads(env('HEADERS_FOR_PUSH_EMAIL_REQUEST'))
-SPLASH_URL = env('SPLASH_URL')
 MAX_EMAIL_REPLY_RETRIES = int(env('MAX_EMAIL_REPLY_RETRIES'))
 STATIC_COOKIES = json.loads(env('STATIC_COOKIES'))
+
+
+USE_ALTERNATE_EMAIL = env('USE_ALTERNATE_EMAIL')
+if USE_ALTERNATE_EMAIL == 'True' or USE_ALTERNATE_EMAIL == 'true':
+    USE_ALTERNATE_EMAIL = True
+else:
+    USE_ALTERNATE_EMAIL = False
+
+ALTERNATE_EMIALURL = env("ALTERNATE_EMIALURL")
+ALTERNATE_EMAIL_USERNAME = env("ALTERNATE_EMAIL_USERNAME")
+ALTERNATE_EMAIL_PASSWORD = env("ALTERNATE_EMAIL_PASSWORD")
+EMAILURL = env("EMAILURL")
+EMAIL_USERNAME = env('EMAIL_USERNAME')
+EMAIL_PASSWORD = env('EMAIL_PASSWORD')
+MAIL_SEARCH_DAYS_VALUE = int(env('MAIL_SEARCH_DAYS_VALUE'))
+MAIL_SEARCH_STRING = env('MAIL_SEARCH_STRING')
+MAIL_BROADER_SEARCH_STRING = env('MAIL_BROADER_SEARCH_STRING')
+MAX_ACCEPT_INVITE_RETRIES = int(env('MAX_ACCEPT_INVITE_RETRIES'))
+INVITATION_CODE_BOX_ID = env('INVITATION_CODE_BOX_ID')
+INVITATION_CODE_GO_BUTTON_ID = env('INVITATION_CODE_GO_BUTTON_ID')
+PERSON_IN_CUSTODY_INFORMATION_DIV_ID = env('PERSON_IN_CUSTODY_INFORMATION_DIV_ID')
+INVITATION_ACCEPT_BUTTON_ID = env('INVITATION_ACCEPT_BUTTON_ID')
+RECORD_NOT_FOUND_SPAN_ID = env('RECORD_NOT_FOUND_SPAN_ID')
+HEADERS_FOR_ACCEPT_INVITE = json.loads(env('HEADERS_FOR_ACCEPT_INVITE'))
