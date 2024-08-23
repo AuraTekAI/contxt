@@ -1,6 +1,6 @@
 
 from contxt.utils.constants import SMS_TABLE_SEED_DATA
-from core.models import SMS
+from sms_app.models import SMS
 from process_emails.models import Email
 from accounts.models import User
 from core.models import Contact

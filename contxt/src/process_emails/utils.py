@@ -1,6 +1,6 @@
 
 from process_emails.models import Email
-from core.models import SMS
+from sms_app.models import SMS
 
 from django.conf import settings
 

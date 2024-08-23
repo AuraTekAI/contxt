@@ -1,4 +1,6 @@
 from core.models import *
+from sms_app.models import SMS
+from process_emails.models import Email
 
 from django.contrib import admin
 from django.contrib.auth.models import Group

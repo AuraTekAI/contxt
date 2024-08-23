@@ -102,3 +102,8 @@ You will only need to run the above command if you are running the project for t
 - To run the different modules individually, these commands should be run:
     - `docker exec -it web python src/manage.py pull_emails`
     - `docker exec -it web python src/manage.py push_emails`
+    - `docker exec -it web python src/manage.py accept_invites`
+
+#### For Testing Only
+- Run the below command to add some initial data to the database for testing.
+    - `docker exec -it web python src/manage.py seed_db_for_testing`

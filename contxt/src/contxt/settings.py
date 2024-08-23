@@ -222,6 +222,12 @@ LOGGING = {
             'filename': os.path.join(LOG_DIR, 'send_sms.log'),
             'formatter': 'verbose'
         },
+        'sms_quota_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'sms_quota.log'),
+            'formatter': 'verbose'
+        },
     },
     'loggers': {
         'django': {
@@ -261,6 +267,11 @@ LOGGING = {
         },
         'send_sms': {
             'handlers': ['console', 'send_sms_file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+        'sms_quota': {
+            'handlers': ['console', 'sms_quota_file'],
             'level': 'DEBUG',
             'propagate': False
         }
@@ -320,6 +331,10 @@ HTTPBIN_IP_URL_HTTPS = env('HTTPBIN_IP_URL_HTTPS')
 INBOX_URL = env('INBOX_URL')
 SPLASH_URL = env('SPLASH_URL')
 CONTACT_URL = env('CONTACT_URL')
+REPLY_WEBHOOK_URL = env('REPLY_WEBHOOK_URL')
+SMS_SEND_URL = env('SMS_SEND_URL')
+SMS_STATUS_URL = env('SMS_STATUS_URL')
+SMS_QUOTA_URL = env('SMS_QUOTA_URL')
 
 PULL_EMAIL_REQUEST_HEADERS = json.loads(env('PULL_EMAIL_REQUEST_HEADERS'))
 COMPRESSED_VIEWSTATE_ID = env('COMPRESSED_VIEWSTATE_ID')
@@ -358,3 +373,11 @@ PERSON_IN_CUSTODY_INFORMATION_DIV_ID = env('PERSON_IN_CUSTODY_INFORMATION_DIV_ID
 INVITATION_ACCEPT_BUTTON_ID = env('INVITATION_ACCEPT_BUTTON_ID')
 RECORD_NOT_FOUND_SPAN_ID = env('RECORD_NOT_FOUND_SPAN_ID')
 HEADERS_FOR_ACCEPT_INVITE = json.loads(env('HEADERS_FOR_ACCEPT_INVITE'))
+
+API_KEY = env('API_KEY')
+TEST_TO_NUMBER = env('TEST_TO_NUMBER')
+TEST_MESSAGE_BODY = env('TEST_MESSAGE_BODY')
+TEST_KEY = env('TEST_KEY')
+TEST_USER_ID = env('TEST_USER_ID')
+MAX_SMS_RETRIES = int(env('MAX_SMS_RETRIES'))
+SMS_RETRY_DELAY = int(env('SMS_RETRY_DELAY'))
