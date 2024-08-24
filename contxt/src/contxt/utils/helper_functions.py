@@ -23,6 +23,24 @@ def extract_screenshots(data):
     return screenshots
 
 def save_screenshots_to_local(result={}, logger_name='app'):
+    """
+    Saves screenshots and HAR data from the provided result to local files.
+
+    This function extracts screenshots from the `result` dictionary, saves each screenshot as a PNG file
+    in the local directory, and optionally saves HAR (HTTP Archive) data to a file.
+
+    Parameters:
+        result (dict): A dictionary containing the data with screenshots and optionally HAR data.
+                       Expected to include base64-encoded screenshots and a 'har' key with HAR data.
+        logger_name (str): The name of the logger to use for logging messages. Defaults to 'app'.
+
+    Returns:
+        bool: `True` if screenshots and HAR data were successfully saved; `None` if there were no screenshots to save.
+
+    Logs:
+        - Logs a message if there are no screenshots to save.
+    """
+
     logger = logging.getLogger(logger_name)
     if result == {}:
         logger.info('No screenshots to save. Returning None.')

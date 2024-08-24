@@ -15,9 +15,43 @@ STATIC_COOKIES = settings.STATIC_COOKIES
 logger = logging.getLogger('push_email')
 
 class Command(BaseCommand):
+    """
+    Django management command to process and send email replies based on data retrieved from the database.
+
+    Attributes:
+        help (str): Description of the command's purpose.
+
+    Methods:
+        handle(*args, **kwargs):
+            Entry point for the command. Retrieves a session and initiates the push email process.
+
+        capture_session_state(session):
+            Captures and logs the current state of the session including headers and cookies.
+
+        log_response_info(response, is_splash_response=False, retry_number=0):
+            Logs detailed information about the response from the email reply request.
+
+        send_email_reply(session, message_content, message_id, session_state):
+            Sends an email reply using a Splash service and handles retry logic.
+
+        run_push_email(session=None):
+            Main method to handle the push email process including retrieving messages and sending replies.
+    """
     help = 'Run the push email process to send replies.'
 
     def handle(self, *args, **kwargs):
+        """
+        Executes the command to send email replies.
+
+        This method retrieves a session from `SessionManager` and then calls `run_push_email` to process and send replies.
+
+        Args:
+            *args: Positional arguments (not used).
+            **kwargs: Keyword arguments (not used).
+
+        Returns:
+            None
+        """
         session = SessionManager.get_session()
         if not session:
             logger.error("Failed to retrieve session.")
@@ -25,6 +59,17 @@ class Command(BaseCommand):
         self.run_push_email(session=session)
 
     def capture_session_state(self, session):
+        """
+        Captures and logs the current state of the session.
+
+        This includes the session headers and cookies, excluding static cookies defined in settings.
+
+        Args:
+            session (requests.Session): The session object to capture state from.
+
+        Returns:
+            dict: A dictionary containing the captured session headers and cookies.
+        """
         state = {
             'headers': dict(session.headers),
             'cookies': {k: v for k, v in session.cookies.items() if k not in STATIC_COOKIES}
@@ -34,6 +79,19 @@ class Command(BaseCommand):
         return state
 
     def log_response_info(self, response, is_splash_response=False, retry_number=0):
+        """
+        Logs detailed information about the HTTP response.
+
+        This includes URL, status code, headers, cookies, and body content. If the response is from Splash, it logs additional details.
+
+        Args:
+            response (requests.Response): The response object to log.
+            is_splash_response (bool): Indicates if the response is from Splash.
+            retry_number (int): The retry attempt number.
+
+        Returns:
+            None
+        """
         logger.info(f"=== RESPONSE INFO ===")
         logger.info(f"URL: {response.url}")
         logger.info(f"Status Code: {response.status_code}")
@@ -56,6 +114,20 @@ class Command(BaseCommand):
         logger.info(f"=====================")
 
     def send_email_reply(self, session, message_content, message_id, session_state):
+        """
+        Sends an email reply using the Splash service.
+
+        Constructs a POST request with Lua script and session data, then handles retries for sending the reply.
+
+        Args:
+            session (requests.Session): The session object to use for sending the reply.
+            message_content (str): The content of the reply message.
+            message_id (str): The ID of the message to reply to.
+            session_state (dict): The current state of the session including headers and cookies.
+
+        Returns:
+            bool: True if the reply was sent successfully, False otherwise.
+        """
         reply_url = f"https://www.corrlinks.com/NewMessage.aspx?messageId={message_id}&type=reply"
 
         lua_script_path = get_lua_script_absolute_path(relative_path='lua_scripts/send_email_reply.lua')
@@ -114,6 +186,17 @@ class Command(BaseCommand):
         return False
 
     def run_push_email(self, session=None):
+        """
+        Runs the push email process, retrieving messages from the database and sending replies.
+
+        Handles test mode and updates the SMS processed value after sending each reply.
+
+        Args:
+            session (requests.Session): The session object to use for sending replies.
+
+        Returns:
+            str: A status message indicating the completion of the push email operation.
+        """
         if session == None:
             logger.error('Missing session information. Maybe there was an error in login ?')
             sys.exit(1)

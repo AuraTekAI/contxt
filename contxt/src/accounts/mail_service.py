@@ -2,8 +2,9 @@
 import imaplib
 import email
 from email.header import decode_header
-import logging
 from datetime import datetime, timedelta
+
+import logging
 
 logger = logging.getLogger('mail_box')
 

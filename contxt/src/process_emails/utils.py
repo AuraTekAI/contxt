@@ -12,11 +12,28 @@ import pytz
 pull_email_logger = logging.getLogger('pull_email')
 
 def convert_string_to_valid_datetime(datetime_string=None, timezone=settings.TIME_ZONE):
+    """
+    Converts a string representation of a datetime to a formatted string with timezone information.
+
+    Args:
+        datetime_string (str, optional): The datetime string to convert, formatted as "%m/%d/%Y %I:%M:%S %p".
+        timezone (str, optional): The timezone to localize the datetime to. Defaults to the timezone specified in settings.
+
+    Returns:
+        str: The formatted datetime string with timezone information, or None if the input is invalid.
+
+    Logs:
+        - Error if `datetime_string` is `None`.
+    """
     if datetime_string is None:
         pull_email_logger.error('datetime_string cannot be NULL')
         return None
 
-    parsed_datetime = datetime.strptime(datetime_string, "%m/%d/%Y %I:%M:%S %p")
+    try:
+        parsed_datetime = datetime.strptime(datetime_string, "%m/%d/%Y %I:%M:%S %p")
+    except ValueError as e:
+        pull_email_logger.error(f'Error parsing datetime string: {e}')
+        return None
 
     local_tz = pytz.timezone(timezone)
     aware_datetime = local_tz.localize(parsed_datetime)
@@ -26,15 +43,32 @@ def convert_string_to_valid_datetime(datetime_string=None, timezone=settings.TIM
     return formatted_date
 
 def save_emails(emails_to_save=None):
-    if emails_to_save == None:
+    """
+    Saves a list of email records to the database.
+
+    Args:
+        emails_to_save (list of dicts, optional): List of dictionaries, each containing email details to be saved.
+            Each dictionary must have the following keys: 'user_id', 'message_id', 'sent_datetime', 'subject', 'body'.
+
+    Logs:
+        - Error if `emails_to_save` is `None`.
+        - Error if there is an exception while saving an email to the database.
+    """
+    if emails_to_save is None:
         pull_email_logger.error('emails_to_save can not be empty.')
         return None
 
     for email in emails_to_save:
         try:
-            Email.objects.create(user=email['user_id'], message_id=email['message_id'], sent_date_time=convert_string_to_valid_datetime(email['sent_datetime']), subject=email['subject'], body=email['body'])
+            Email.objects.create(
+                user=email['user_id'],
+                message_id=email['message_id'],
+                sent_date_time=convert_string_to_valid_datetime(email['sent_datetime']),
+                subject=email['subject'],
+                body=email['body']
+            )
         except Exception as e:
-            pull_email_logger.error(f'Error occured while saving Email to database {email} {e}')
+            pull_email_logger.error(f'Error occurred while saving Email to database: {email} {e}')
 
 
 def convert_cookies_to_splash_format(splash_cookies=None, cookies=None):
@@ -72,6 +106,21 @@ def convert_cookies_to_splash_format(splash_cookies=None, cookies=None):
         return False
 
 def get_messages_to_send_from_database(message_id_content=[]):
+    """
+    Retrieves unprocessed SMS messages from the database and collects corresponding email data.
+
+    Args:
+        message_id_content (list of lists, optional): A list to which SMS message details will be appended.
+            Each entry in the list will be a sublist containing SMS ID, email message ID, and the SMS message content.
+
+    Returns:
+        list of lists: Updated `message_id_content` with details of unprocessed SMS messages and corresponding email data.
+
+    Notes:
+        - Filters for SMS messages that are inbound and have not been processed.
+        - For each unprocessed SMS, retrieves the associated email object to get the message ID.
+        - Appends a list containing SMS ID, email message ID, and message content to `message_id_content` for each unprocessed SMS.
+    """
     unprocessed_sms_objects = SMS.objects.filter(is_processed=False, direction='Inbound').all()
     if unprocessed_sms_objects:
         for unprocessed_sms in unprocessed_sms_objects:
@@ -82,9 +131,24 @@ def get_messages_to_send_from_database(message_id_content=[]):
 
 
 def update_sms_processed_value(sms_id=None):
+    """
+    Updates the `is_processed` flag of a specific SMS record to `True` in the database.
+
+    Args:
+        sms_id (int, optional): The ID of the SMS record to update.
+
+    Returns:
+        bool: `True` if the SMS record was found and updated successfully, otherwise `False`.
+
+    Notes:
+        - Retrieves the SMS object with the given `sms_id`.
+        - Sets the `is_processed` attribute of the SMS object to `True` and saves the changes.
+    """
     sms_object = SMS.objects.filter(id=int(sms_id)).first()
     if sms_object:
         sms_object.is_processed = True
         sms_object.save()
 
-    return True
+        return True
+
+    return False

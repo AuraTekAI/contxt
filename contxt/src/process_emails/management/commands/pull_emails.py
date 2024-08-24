@@ -23,6 +23,30 @@ class Command(BaseCommand):
     help = 'Process unread emails from the Corrlinks inbox'
 
     def handle(self, *args, **options):
+        """
+        Main command handler to process unread emails from the Corrlinks inbox.
+
+        The command performs the following actions:
+        1. Retrieves a session using the `SessionManager`.
+        2. Fetches the inbox page and checks the response status.
+        3. Parses the inbox page to retrieve `COMPRESSEDVIEWSTATE` and email rows.
+        4. For each email row:
+            - Extracts the `MessageId`, sender, subject, and date.
+            - Sends a POST request to fetch the email content using the extracted `MessageId`.
+            - Parses and processes the AJAX response to extract email data.
+            - Creates or retrieves a user and prepares email data for saving.
+        5. Saves the processed emails if any.
+
+        Args:
+            *args: Positional arguments (not used).
+            **options: Keyword arguments (not used).
+
+        Returns:
+            None
+
+        Logs:
+            - Information, warnings, and errors are logged at various steps of the process.
+        """
         # Retrieve session from another command
         logger.info('Fetching session via Login service...')
 

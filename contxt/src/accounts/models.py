@@ -4,13 +4,64 @@ from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, Permis
 
 class CustomAccountManager(BaseUserManager):
     """
-    Custom user model manager where username is the unique identifier
-    for authentication instead of email.
+    Custom user model manager for handling user creation with a username as the unique identifier
+    instead of an email address. This class provides methods for creating users with different
+    levels of access (regular users, staff users, and superusers).
+
+    Methods:
+    - _create_user(self, user_name, password, **extra_fields):
+        Creates and saves a user with the given username and password.
+        Parameters:
+            user_name (str): The username of the user.
+            password (str): The password for the user.
+            **extra_fields (dict): Additional fields for the user.
+        Returns:
+            User: The created user instance.
+
+    - create_staff(self, user_name, password, **extra_fields):
+        Creates and saves a staff user with the given username and password.
+        Parameters:
+            user_name (str): The username of the staff user.
+            password (str): The password for the staff user.
+            **extra_fields (dict): Additional fields for the staff user.
+        Returns:
+            User: The created staff user instance.
+
+    - create_superuser(self, user_name, password, **extra_fields):
+        Creates and saves a superuser with the given username and password.
+        Parameters:
+            user_name (str): The username of the superuser.
+            password (str): The password for the superuser.
+            **extra_fields (dict): Additional fields for the superuser.
+        Returns:
+            User: The created superuser instance.
+
+    - create_user(self, user_name, password, **extra_fields):
+        Creates and saves a regular user with the given username and password.
+        Parameters:
+            user_name (str): The username of the user.
+            password (str): The password for the user.
+            **extra_fields (dict): Additional fields for the user.
+        Returns:
+            User: The created regular user instance.
     """
 
     def _create_user(self, user_name, password, **extra_fields):
         """
         Create and save a User with the given username and password.
+        This method is called by `create_user`, `create_staff`, and `create_superuser` methods.
+        Ensures that the username is provided and hashes the password before saving.
+
+        Parameters:
+            user_name (str): The username of the user.
+            password (str): The password for the user.
+            **extra_fields (dict): Additional fields for the user.
+
+        Returns:
+            User: The created user instance.
+
+        Raises:
+            ValueError: If the `user_name` is not provided.
         """
         if not user_name:
             raise ValueError("Users must have a username!")
@@ -26,6 +77,15 @@ class CustomAccountManager(BaseUserManager):
     def create_staff(self, user_name, password, **extra_fields):
         """
         Create and save a staff User with the given username and password.
+        Staff users have `is_staff=True` which allows them to access the admin interface.
+
+        Parameters:
+            user_name (str): The username of the staff user.
+            password (str): The password for the staff user.
+            **extra_fields (dict): Additional fields for the staff user.
+
+        Returns:
+            User: The created staff user instance.
         """
         user = self._create_user(
             user_name=user_name,
@@ -38,7 +98,20 @@ class CustomAccountManager(BaseUserManager):
 
     def create_superuser(self, user_name, password, **extra_fields):
         """
-        Create and save a SuperUser with the given username and password.
+        Create and save a superuser with the given username and password.
+        Superusers have both `is_staff=True` and `is_superuser=True`, granting full access
+        to the admin interface.
+
+        Parameters:
+            user_name (str): The username of the superuser.
+            password (str): The password for the superuser.
+            **extra_fields (dict): Additional fields for the superuser.
+
+        Returns:
+            User: The created superuser instance.
+
+        Raises:
+            ValueError: If `is_staff` or `is_superuser` fields are not set to True.
         """
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
@@ -62,6 +135,15 @@ class CustomAccountManager(BaseUserManager):
     def create_user(self, user_name, password, **extra_fields):
         """
         Create and save a regular User with the given username and password.
+        Regular users have `is_active=True` by default.
+
+        Parameters:
+            user_name (str): The username of the user.
+            password (str): The password for the user.
+            **extra_fields (dict): Additional fields for the user.
+
+        Returns:
+            User: The created regular user instance.
         """
         extra_fields.setdefault("is_active", True)
 
@@ -77,6 +159,46 @@ class CustomAccountManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    """
+    Custom user model with additional fields for a user profile.
+    This model uses `user_name` as the unique identifier for authentication.
+
+    Fields:
+    - name (str): Full name of the user.
+    - pic_number (str): Unique identifier number for the user, optional.
+    - is_active (bool): Indicates whether the user account is active.
+    - user_name (str): Unique username for the user.
+    - age (int): Age of the user, optional.
+    - sex (str): Gender of the user, optional.
+    - private_mode (bool): Indicates if the user has private mode enabled.
+    - account_balance (Decimal): Balance of the user's account.
+    - custom_email (EmailField): Optional custom email address for the user.
+    - active_until_date (DateField): Date until which the user's account is active, optional.
+    - sms_left (Decimal): Number of SMS left for the user, optional.
+    - custom_name (str): Optional custom name for the user.
+    - extra_sms (Decimal): Extra SMS quota for the user.
+
+    - is_staff (bool): Indicates if the user has staff privileges.
+    - is_superuser (bool): Indicates if the user has superuser privileges.
+    - updated_at (DateTimeField): Timestamp of the last update to the user's account.
+    - created_at (DateTimeField): Timestamp of the user's account creation.
+
+    Manager:
+    - objects (CustomAccountManager): Custom manager for creating and managing user accounts.
+
+    Meta:
+    - db_table (str): Specifies the database table name as 'users'.
+    - verbose_name (str): Human-readable name for the model.
+    - verbose_name_plural (str): Human-readable plural name for the model.
+    - indexes (list): List of database indexes for optimizing queries on `is_active` and `custom_email` fields.
+
+    Methods:
+    - save(self, *args, **kwargs):
+        Custom save method to handle additional logic related to `extra_sms` and `sms_left`.
+    - __str__(self):
+        Returns a string representation of the user, which is their `name`.
+    """
+
     name = models.CharField(max_length=255)
     pic_number = models.CharField(max_length=100, unique=True, null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -102,10 +224,26 @@ class User(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ["name"]
 
     def save(self, *args, **kwargs):
+        """
+        Custom save method for handling additional logic related to SMS quotas.
+        Currently a placeholder for additional logic related to `extra_sms` and `sms_left`.
+
+        Parameters:
+            *args: Positional arguments.
+            **kwargs: Keyword arguments.
+
+        Calls the superclass's `save` method to perform the actual saving.
+        """
         # TODO create logic for extra sms and sms left
         super().save(*args, **kwargs)
 
-    def _str_(self):
+    def __str__(self):
+        """
+        Returns the string representation of the user.
+
+        Returns:
+            str: The user's name.
+        """
         return self.name
 
     class Meta:

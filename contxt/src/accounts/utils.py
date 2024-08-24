@@ -11,6 +11,23 @@ pull_email_logger = logging.getLogger('pull_email')
 
 
 def get_or_create_user(email_data=None):
+    """
+    Retrieves or creates a `User` based on the provided email data.
+
+    This function extracts user information from `email_data` and uses it to either fetch an existing user
+    or create a new user. The user is identified by `pic_number` (extracted from `email_data`). If the user is created,
+    an initial password is set.
+
+    Parameters:
+        email_data (dict, optional): Dictionary containing email data with 'from' field that includes user information.
+
+    Returns:
+        User: The retrieved or created `User` instance, or `None` if no email data is provided or if an error occurs.
+
+    Logs:
+        - Error if `email_data` is `None`.
+        - Error if the `user_id_name` format is invalid.
+    """
     if email_data is None:
         pull_email_logger.error("No email data provided.")
         return None
@@ -45,6 +62,15 @@ def get_or_create_user(email_data=None):
     return user
 
 def get_email_password_url():
+    """
+    Retrieves email credentials and URL based on the configuration settings.
+
+    Depending on whether alternate email settings are used, this function returns a list containing
+    the email username, password, and URL for accessing the email service.
+
+    Returns:
+        list: A list containing email username, password, and URL.
+    """
     if settings.USE_ALTERNATE_EMAIL:
         user_name = settings.ALTERNATE_EMAIL_USERNAME
         password = settings.ALTERNATE_EMAIL_PASSWORD
@@ -57,6 +83,15 @@ def get_email_password_url():
     return [user_name, password, email_Url]
 
 def get_username_password():
+    """
+    Retrieves login credentials based on the configuration settings.
+
+    Depending on whether alternate login details are used, this function returns a list containing
+    the username and password for authentication.
+
+    Returns:
+        list: A list containing the username and password.
+    """
     if settings.USE_ALTERNATE_LOGIN_DETAILS:
         user_name = settings.ALTERNATE_USERNAME
         password = settings.ALTERNATE_PASSWORD

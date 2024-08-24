@@ -113,31 +113,80 @@ def log_response_info(response, is_splash_request=False):
     logger.info("=====================")
 
 def fetch_invite_code_and_name():
-    logger.info("Starting to fetch invite code and name")
-    invite_code_full_name_data = {}
+    """
+    Fetches invitation codes and full names from recent emails.
+
+    This function orchestrates the process of connecting to an email inbox, searching
+    for specific emails, extracting invitation codes and full names, and deleting
+    the processed emails. The function is designed to handle cases where the email
+    content might not match the exact search criteria and includes broader search options.
+
+    Returns:
+    - dict: A dictionary where the keys are invitation codes (str) and the values are lists
+      containing the full name (str) and email ID (str). If no valid emails are found,
+      it returns None.
+
+    Workflow:
+    1. It logs the start of the fetching process.
+    2. Retrieves user credentials and the email server URL.
+    3. Connects to the mailbox using the `MailBox` class within a context manager (`with` statement),
+       ensuring the mailbox is properly closed after operations.
+    4. Selects the inbox and searches for emails matching the `MAIL_SEARCH_DAYS_VALUE` and `MAIL_SEARCH_STRING`
+       criteria.
+    5. If no emails are found, it broadens the search using `MAIL_BROADER_SEARCH_STRING`.
+    6. Sorts the found email IDs in descending order to process the most recent emails first.
+    7. Iterates over the sorted email IDs, fetching and processing each email to extract the invitation
+       code and full name.
+    8. If successful, stores the invite code, full name, and email ID in a dictionary.
+    9. Returns the dictionary containing all found invite codes and names.
+
+    Error Handling:
+    - Logs and returns None if an error occurs during any of the steps.
+    """
+    logger.info("Starting to fetch invite code and name")  # Log the start of the fetching process
+
+    invite_code_full_name_data = {}  # Dictionary to store invite codes and associated full names
+
     try:
+        # Retrieve email credentials and URL
         user_name, password, email_Url = get_email_password_url()
 
+        # Use the MailBox class within a context manager to ensure proper cleanup
         with MailBox(user_name, password, email_Url) as mailbox:
+            # Select the inbox folder
             mailbox.get_inbox()
+
+            # Search for emails based on specific days and text criteria
             invite_email_ids = mailbox.search_mail_using_date_text_value(settings.MAIL_SEARCH_DAYS_VALUE, settings.MAIL_SEARCH_STRING)
+
+            # If no emails are found with the primary search string, broaden the search
             if not invite_email_ids:
                 invite_email_ids = mailbox.search_mail_using_date_text_value(settings.MAIL_SEARCH_DAYS_VALUE, settings.MAIL_BROADER_SEARCH_STRING)
-            if not invite_email_ids == None and not invite_email_ids == []:
+
+            # If emails are found, sort them by ID in descending order
+            if invite_email_ids:
                 invite_email_ids = mailbox.sort_email_ids(email_ids=invite_email_ids)
             else:
+                # Log and exit if no invite emails are found
                 logger.info("No invite found in any emails")
                 return None
 
+            # Iterate over the sorted email IDs and process each email
             for email_id in invite_email_ids:
+                # Fetch the email data for the current email ID
                 msg_data = mailbox.fetch_email(email_id)
                 if msg_data:
+                    # Process the email to extract the invite code and full name
                     invite_code, full_name = mailbox.process_email(msg_data)
                     if invite_code and full_name:
+                        # Print the invite code and full name (could be changed to logging if necessary)
                         print(f"Invite Code: {invite_code}, Full Name: {full_name}")
+                        # Store the extracted data in the dictionary
                         invite_code_full_name_data[invite_code] = [full_name, email_id]
+            # Return the dictionary with invite codes and names
             return invite_code_full_name_data
     except Exception as e:
+        # Log any errors that occur during the process
         logger.error(f"An error occurred while fetching invite: {str(e)}")
         return None
 
@@ -275,6 +324,39 @@ def navigate_enter_code_accept_invite(session, invitation_code=None, email_id=No
     return None
 
 def process_invitation():
+    """
+    Manages the complete process of fetching invitation codes from emails, logging into Corrlinks,
+    and submitting the codes to accept pending invitations.
+
+    Returns:
+    - dict: A dictionary containing the processing status for each invitation code. Each key is an invitation code,
+            and its value is a message indicating whether the code was processed successfully or an error occurred.
+    - bool: Returns `False` if there was a failure at any step in the process, such as fetching invitation codes or logging in.
+
+    This function performs the following steps:
+    1. **Fetch Invitation Codes and Corresponding Emails**:
+       - Calls the `fetch_invite_code_and_name` function to retrieve a dictionary of invitation codes and email details.
+       - If this step fails, logs an error and returns `False`.
+
+    2. **Session Management**:
+       - Obtains a session using the `SessionManager.get_session()` method, which handles the login to Corrlinks.
+       - If session retrieval fails, logs an error and returns `False`.
+       - Logs the session cookies for debugging purposes.
+
+    3. **Load Lua Script**:
+       - Loads the Lua script from the specified file path, which will be used to automate interactions with the Corrlinks website.
+
+    4. **Process Each Invitation Code**:
+       - Iterates over each invitation code fetched from the emails.
+       - For each code, it calls `navigate_enter_code_accept_invite` to navigate to the Pending Contact page, enter the code, and accept the invite.
+       - Logs detailed response information for each code, including success or failure messages.
+       - If the invitation is processed successfully, it stores a success message in the `response_dict`.
+       - If the function encounters an issue with a particular code, it logs the issue and stores the failure message in `response_dict`.
+
+    5. **Return Processing Results**:
+       - Returns the `response_dict`, which contains the processing status for each invitation code.
+       - Each key in the dictionary represents an invitation code, and the value indicates whether it was successfully processed or not.
+    """
     logger.info("Starting the invitation processing")
     invite_codes_dict = fetch_invite_code_and_name()
     if not invite_codes_dict or invite_codes_dict == {}:
@@ -295,7 +377,7 @@ def process_invitation():
     response_dict = {}
     for invite_code, value in invite_codes_dict.items():
         email_id = value[1]
-        invite_code = 'HTM2PW3T'
+        invite_code = invite_code
         response_value = navigate_enter_code_accept_invite(session=session, invitation_code=invite_code, email_id=email_id, lua_script=lua_script)
 
         if not response_value == None:
