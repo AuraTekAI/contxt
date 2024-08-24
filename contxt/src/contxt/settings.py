@@ -281,6 +281,7 @@ LOGGING = {
 AUTH_USER_MODEL = 'accounts.User'
 
 ALLOWED_HOSTS = env('ALLOWED_HOSTS').split(',')
+CSRF_TRUSTED_ORIGINS = env('CSRF_TRUSTED_ORIGINS').split(',')
 
 SECRET_KEY = env("SECRET_KEY")
 
