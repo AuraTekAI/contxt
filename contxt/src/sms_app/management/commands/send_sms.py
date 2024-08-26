@@ -9,9 +9,6 @@ from contxt.utils.constants import SMS_DIRECTION_CHOICES, SMS_STATUS_CHOICES
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
-from db_ops import get_database_connection, close_database_resources, log_sms_to_db, update_sms_status_in_db, get_unprocessed_sms, update_sms_processed, get_user_info_by_contact_id, get_contact_by_phone
-# from push_email import process_emails
-
 import logging
 import requests
 import time
