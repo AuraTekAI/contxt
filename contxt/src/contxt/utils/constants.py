@@ -1,3 +1,6 @@
+
+# IMPORTANT: if you have to make changes in these constant values, then please make sure that their position doesn't change.
+
 """
 SMS MODEL CONSTANTS
 """
@@ -21,9 +24,4 @@ SMS TABLE SEED DATA
 SMS_TABLE_SEED_DATA = {
     '3736625367' : [],
     '3736550349' : [],
-    '3736435606' : [],
-    '3736414498' : [],
-    '3736366249' : [],
-    '3735333329' : []
-
 }

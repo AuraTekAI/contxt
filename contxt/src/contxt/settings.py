@@ -44,9 +44,13 @@ INSTALLED_APPS = [
 
     # Third part apps
     "django_celery_beat",
+    "rest_framework",
+    "corsheaders",
+    "drf_yasg",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -228,6 +232,12 @@ LOGGING = {
             'filename': os.path.join(LOG_DIR, 'sms_quota.log'),
             'formatter': 'verbose'
         },
+        'sms_webhook_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'sms_webhook.log'),
+            'formatter': 'verbose'
+        },
     },
     'loggers': {
         'django': {
@@ -274,11 +284,26 @@ LOGGING = {
             'handlers': ['console', 'sms_quota_file'],
             'level': 'DEBUG',
             'propagate': False
+        },
+        'sms_webhook': {
+            'handlers': ['console', 'sms_webhook_file'],
+            'level': 'DEBUG',
+            'propagate': False
         }
     }
 }
 
 AUTH_USER_MODEL = 'accounts.User'
+
+SWAGGER_SETTINGS = {
+'SECURITY_DEFINITIONS': {
+ 'Bearer':{
+    'type':'apiKey',
+    'name':'Authorization',
+    'in':'header'
+  }
+ }
+}
 
 ALLOWED_HOSTS = env('ALLOWED_HOSTS').split(',')
 CSRF_TRUSTED_ORIGINS = env('CSRF_TRUSTED_ORIGINS').split(',')

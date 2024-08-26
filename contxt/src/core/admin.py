@@ -1,12 +1,86 @@
 from core.models import *
-from sms_app.models import SMS
-from process_emails.models import Email
 
 from django.contrib import admin
 from django.contrib.auth.models import Group
-from django.contrib.auth.admin import UserAdmin
 
-# Register models with the Django admin site.
+from django.contrib import admin
+from .models import Contact
+
+class ContactAdmin(admin.ModelAdmin):
+    """
+    Admin interface for managing Contact records.
+
+    Provides functionality to view, edit, and manage Contact records.
+    """
+
+    # Fields to display in the list view
+    list_display = (
+        'contact_name',
+        'phone_number',
+        'email',
+        'user',
+        'created_at',
+        'updated_at',
+    )
+
+    # Fields that are clickable to edit the instance
+    list_display_links = ('contact_name', 'phone_number')
+
+    # Fields to be used for filtering in the list view
+    list_filter = (
+        'user',
+        'created_at',
+        'updated_at',
+    )
+
+    # Fields to be used for searching in the list view
+    search_fields = ('contact_name', 'phone_number', 'email', 'user__username')
+
+    # Fields to be displayed in the detail view and edit form
+    fields = (
+        'user',
+        'contact_name',
+        'phone_number',
+        'email',
+        'created_at',
+        'updated_at',
+    )
+
+    # Make fields read-only if they should not be editable
+    readonly_fields = ('created_at', 'updated_at')
+
+    # Customize how the model is ordered in the list view
+    ordering = ('-created_at',)
+
+    def get_list_display(self, request):
+        """
+        Customize the list display based on user permissions or other logic.
+
+        Args:
+            request (HttpRequest): The request object.
+
+        Returns:
+            tuple: The tuple of fields to display in the list view.
+        """
+        if request.user.is_superuser:
+            return super().get_list_display(request)
+        return ('contact_name', 'phone_number', 'email', 'user')
+
+    def get_readonly_fields(self, request, obj=None):
+        """
+        Determine which fields should be read-only based on user permissions or other logic.
+
+        Args:
+            request (HttpRequest): The request object.
+            obj (Contact, optional): The current instance of the model being edited.
+
+        Returns:
+            tuple: The tuple of read-only fields.
+        """
+        if obj:  # Editing an existing object
+            return self.readonly_fields + ('user',)
+        return self.readonly_fields
+
 
 # Registers the UserMessage model with the Django admin interface.
 # This allows the UserMessage model to be managed through the Django admin interface.
@@ -16,17 +90,9 @@ admin.site.register(UserMessage)
 # This allows the Log model to be managed through the Django admin interface.
 admin.site.register(Log)
 
-# Registers the SMS model with the Django admin interface.
-# This allows the SMS model to be managed through the Django admin interface.
-admin.site.register(SMS)
-
 # Registers the Contact model with the Django admin interface.
 # This allows the Contact model to be managed through the Django admin interface.
-admin.site.register(Contact)
-
-# Registers the Email model with the Django admin interface.
-# This allows the Email model to be managed through the Django admin interface.
-admin.site.register(Email)
+admin.site.register(Contact, ContactAdmin)
 
 # Registers the TransactionHistory model with the Django admin interface.
 # This allows the TransactionHistory model to be managed through the Django admin interface.

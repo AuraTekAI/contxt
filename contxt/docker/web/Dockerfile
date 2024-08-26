@@ -32,6 +32,7 @@ RUN python -m venv /py && \
     apt-get install -y --no-install-recommends build-essential postgresql musl && \
     # Upgrade pip to the latest version to ensure all packages are installed with the latest improvements and security fixes.
     /py/bin/pip install --upgrade pip && \
+    /py/bin/pip install --upgrade setuptools && \
     # Install Python dependencies from the requirements.txt file located in the /app directory.
     /py/bin/pip install -r /app/requirements.txt && \
     # Clean up by removing unnecessary packages to reduce the size of the final image.

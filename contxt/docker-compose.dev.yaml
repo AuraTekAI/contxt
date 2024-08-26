@@ -10,6 +10,7 @@ services:
     volumes:
       - log_files:/app/logs
       - staticfiles:/app/src/staticfiles
+      - ./src/.env:/app/src/.env
     command: >
       sh -c "python /app/src/manage.py wait_for_db &&
              python /app/src/manage.py collectstatic --no-input &&
@@ -64,6 +65,7 @@ services:
       dockerfile: ./docker/beat/Dockerfile.dev
     volumes:
       - log_files:/app/logs
+      - ./src/.env:/app/src/.env
     env_file:
       - ./src/.env
     working_dir: /app/src

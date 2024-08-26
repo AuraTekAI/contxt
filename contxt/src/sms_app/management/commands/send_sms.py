@@ -2,7 +2,8 @@
 from process_emails.models import Email
 from core.models import Contact
 from sms_app.models import SMS
-from sms_app.utils import get_to_number_from_message_body, log_sms_to_database
+from accounts.models import User
+from sms_app.utils import get_to_number_from_message_body, log_sms_to_database, generate_webhook_token
 from contxt.utils.constants import SMS_DIRECTION_CHOICES, SMS_STATUS_CHOICES
 
 from django.core.management.base import BaseCommand
@@ -38,21 +39,23 @@ class Command(BaseCommand):
         if settings.TEST_MODE:
             to_number = to_number or settings.TEST_TO_NUMBER
             message_body = message_body or settings.TEST_MESSAGE_BODY
-            key = settings.TEST_KEY
+            key = settings.API_KEY
             user_id = user_id or settings.TEST_USER_ID
 
-            contact = Contact.objects.first()
+            user_obj = User.objects.filter(pic_number=user_id).first()
+            contact = Contact.objects.filter(user=user_obj).first()
             if contact:
                 contact_id = contact.id
             else:
                 logger.error('No contacts found in the database. Please run seeders to ensure there is at least one contact available for testing.')
-            email = Email.objects.first()
+            email = Email.objects.filter(user=user_obj).first()
 
             payload = {
                 'phone': to_number,
                 'message': message_body,
                 'key': key,
-                # 'replyWebhookUrl': settings.REPLY_WEBHOOK_URL # TODO Implement webhook logic
+                'replyWebhookUrl': settings.REPLY_WEBHOOK_URL,
+                'webhookData' : generate_webhook_token({"timestamp": int(time.time())})
             }
             try:
                 response = requests.post(settings.SMS_SEND_URL, data=payload)
@@ -84,7 +87,7 @@ class Command(BaseCommand):
             except Exception as e:
                 logger.error(f"Request failed: {str(e)}")
         else:
-            key = settings.TEST_KEY # TODO CHANGE THIS TO API_KEY
+            key = settings.TEST_KEY
             unprocessed_emails = Email.objects.filter(is_processed=False).all()
 
             for email in unprocessed_emails:
@@ -104,7 +107,8 @@ class Command(BaseCommand):
                         'phone': to_number,
                         'message': message_body,
                         'key': key,
-                        # 'replyWebhookUrl': settings.REPLY_WEBHOOK_URL # TODO Implement webhook logic
+                        'replyWebhookUrl': settings.REPLY_WEBHOOK_URL,
+                        'webhookData' : generate_webhook_token({"timestamp": int(time.time())})
                     }
 
                     try:
@@ -153,6 +157,8 @@ class Command(BaseCommand):
 
             if status == "DELIVERED":
                 sms_obj.status = SMS_STATUS_CHOICES_DICT['Delivered']
+                email.is_processed = True
+                email.save()
                 sms_obj.save()
                 logger.info(f"SMS {text_id} delivered successfully.")
             else:

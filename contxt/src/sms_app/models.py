@@ -1,5 +1,4 @@
 
-from accounts.models import User
 from core.models import Contact
 from process_emails.models import Email
 

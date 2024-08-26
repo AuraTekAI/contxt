@@ -55,8 +55,8 @@ class Command(BaseCommand):
                 contact, contact_created = Contact.objects.get_or_create(
                     user=user,
                     defaults={
-                        'contact_name': f'Contact for {user.name}',
-                        'phone_number': f'+3731234568',
+                        'contact_name': 'Bradley Roth',
+                        'phone_number': f'+14024312303',
                         'email': f'{user.user_name}@example.com' if user.custom_email is None else user.custom_email,
                     }
                 )
@@ -73,7 +73,7 @@ class Command(BaseCommand):
                     message_id=message_id,
                     sent_date_time=timezone.now(),
                     subject=f'Subject {message_id}',
-                    body=f'Body content for {message_id}',
+                    body=f'Send message to {contact.phone_number}',
                     is_processed=False
                 )
 
