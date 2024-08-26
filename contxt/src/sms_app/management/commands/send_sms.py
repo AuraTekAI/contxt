@@ -87,7 +87,7 @@ class Command(BaseCommand):
             except Exception as e:
                 logger.error(f"Request failed: {str(e)}")
         else:
-            key = settings.TEST_KEY
+            key = settings.API_KEY
             unprocessed_emails = Email.objects.filter(is_processed=False).all()
 
             for email in unprocessed_emails:
