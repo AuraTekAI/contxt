@@ -28,7 +28,7 @@ EXPOSE 8000
 # - postgresql and musl: Necessary for interacting with PostgreSQL databases and providing a lightweight C standard library.
 RUN python -m venv /py && \
     apt-get update && \
-    apt-get install -y postgresql-client && \
+    apt-get install -y postgresql-client curl && \
     apt-get install -y --no-install-recommends build-essential postgresql musl && \
     # Upgrade pip to the latest version to ensure all packages are installed with the latest improvements and security fixes.
     /py/bin/pip install --upgrade pip && \

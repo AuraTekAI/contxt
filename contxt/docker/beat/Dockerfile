@@ -20,7 +20,7 @@ WORKDIR /app
 # postgresql (for the database system), and musl (for lightweight and fast C standard library).
 RUN python -m venv /py && \
     apt-get update && \
-    apt-get install -y postgresql-client && \
+    apt-get install -y postgresql-client curl && \
     apt-get install -y --no-install-recommends build-essential postgresql musl && \
     # Upgrade pip to the latest version.
     /py/bin/pip install --upgrade pip && \

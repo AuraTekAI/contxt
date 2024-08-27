@@ -157,6 +157,7 @@ class Command(BaseCommand):
 
     def check_sms_status(self, text_id, user_id, message_id, message_body, to_number, contact_id, retry_count=0, email=None):
         try:
+            time.sleep(settings.SMS_RETRY_DELAY)
             response = requests.get(settings.SMS_STATUS_URL.format(text_id))
             response.raise_for_status()
             result = response.json()

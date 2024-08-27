@@ -26,7 +26,7 @@ EXPOSE 8000
 # - Install necessary packages, including the PostgreSQL client and tools required for building Python packages.
 RUN python -m venv /py && \
     apt-get update && \
-    apt-get install -y postgresql-client && \
+    apt-get install -y postgresql-client curl && \
     apt-get install -y --no-install-recommends build-essential postgresql musl && \
     # Upgrade pip to the latest version to ensure all packages are installed with the latest improvements and security fixes.
     /py/bin/pip install --upgrade pip && \
