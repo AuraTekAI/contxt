@@ -24,6 +24,7 @@ USERNAME = "bradleyaroth@gmail.com"
 PASSWORD = "Thought20"
 # USERNAME = "info@contxts.net"
 # PASSWORD = "ConTXTsR0ck$"
+MASTERCLPWD = ConsensusMessengerGays1
 LOGIN_BUTTON_TEXT = 'Login >>'
 
 # Proxy settings
@@ -87,8 +88,8 @@ EMAILURL0 = "mail.contxts.net"
 EMIALURL1 = "smtp.gmail.com"
 EMAIL0_USERNAME = "bradley@contxts.net"
 EMAIL0_PASSWORD = "Gr3@tSc0tch"
-EMAIL1_USERNAME = "skybluenook@gmail.com"
-EMAIL1_PASSWORD = "dmfg oyct dcli qqru"
+EMAIL1_USERNAME = "forestpineneedle@gmail.com"
+EMAIL1_PASSWORD = "ndfu ybud kxib tnzk"
 EMAIL2_USERNAME = "citylightpine@gmail.com"
 EMAIL2_PASSWORD = "lnah gcme dqae rkxm"
 EMAIL3_USERNAME = "goldenhourfly@gmail.com"
