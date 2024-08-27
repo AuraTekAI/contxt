@@ -4,10 +4,12 @@ from core.models import Contact
 from sms_app.models import SMS
 from accounts.models import User
 from sms_app.utils import get_to_number_from_message_body, log_sms_to_database, generate_webhook_token
+from sms_app.tasks import send_quota_limit_reached_email_task
 from contxt.utils.constants import SMS_DIRECTION_CHOICES, SMS_STATUS_CHOICES
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
+from django.core.management import call_command
 
 import logging
 import requests
@@ -24,14 +26,24 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         logger.info("Starting SMS processing")
-        self.send_sms()
+
         quota = self.check_quota(settings.API_KEY)
         if quota is not None:
-            logger.info(f"Current SMS quota: {quota}")
-        logger.info("SMS processing completed")
+            sms_quota_logger.info(f"Current SMS quota: {quota}")
+            if quota == 0:
+                send_quota_limit_reached_email_task.delay(quota)
+            else:
+                logger.info("SMS sending process Started")
+
+                self.send_sms()
+
+                logger.info("SMS processing completed")
+        else:
+            sms_quota_logger.error('Error occured while getting quota value from textbelt. Skipping execution of send sms.')
 
     def send_sms(self, user_id=None, contact_id=None, to_number=None, message_body=None, message_id=None):
-        logger.debug(f"Starting SMS send process for user_id: {user_id}, contact_id: {contact_id}")
+        if user_id and contact_id:
+            logger.debug(f"Starting SMS send process for user_id: {user_id}, contact_id: {contact_id}")
 
         if settings.TEST_MODE:
             to_number = to_number or settings.TEST_TO_NUMBER
@@ -78,9 +90,11 @@ class Command(BaseCommand):
                     try:
                         log_sms_to_database(contact_id=contact_id, message_body=message_body, text_id=None, to_number=to_number,
                             direction=SMS_DIRECTION_CHOICES_DICT['Outbound'], status=SMS_STATUS_CHOICES_DICT['Failed'], is_processed=True, email=email)
+
+                        email.is_processed = True
+                        email.save()
                     except Exception as e:
                         logger.error(f'Error occured while logging sms to DB. {e}')
-
             except Exception as e:
                 logger.error(f"Request failed: {str(e)}")
         else:
@@ -131,6 +145,9 @@ class Command(BaseCommand):
                             try:
                                 log_sms_to_database(contact_id=contact_id, message_body=message_body, text_id=None, to_number=to_number, \
                                     direction=SMS_DIRECTION_CHOICES_DICT['Outbound'], status=SMS_STATUS_CHOICES_DICT['Failed'], is_processed=True, email=email)
+
+                                email.is_processed = True
+                                email.save()
                             except Exception as e:
                                 logger.error(f'Error occured while logging sms to DB. {e}')
                     except requests.RequestException as e:
@@ -154,9 +171,11 @@ class Command(BaseCommand):
 
             if status == "DELIVERED":
                 sms_obj.status = SMS_STATUS_CHOICES_DICT['Delivered']
+                sms_obj.save()
+
                 email.is_processed = True
                 email.save()
-                sms_obj.save()
+
                 logger.info(f"SMS {text_id} delivered successfully.")
             else:
                 logger.warning(f"SMS {text_id} not delivered. Status: {status}")
@@ -176,8 +195,12 @@ class Command(BaseCommand):
                 else:
                     sms_obj.status = SMS_STATUS_CHOICES_DICT['Failed']
                     sms_obj.save()
+
+                    email.is_processed = True
+                    email.save()
+
                     logger.error(f"SMS {text_id} failed after {settings.MAX_SMS_RETRIES} attempts.")
-                    # self.send_failure_notification_email(user_id, to_number, contact_id) # TODO implement this
+                    self.send_failure_notification_email(user_id, to_number, email.message_id)
 
         except requests.RequestException as e:
             logger.warning(f"SMS {text_id} not delivered. Status: {status}")
@@ -197,8 +220,12 @@ class Command(BaseCommand):
             else:
                 sms_obj.status = SMS_STATUS_CHOICES_DICT['Failed']
                 sms_obj.save()
+
+                email.is_processed = True
+                email.save()
+
                 logger.error(f"SMS {text_id} failed after {settings.MAX_SMS_RETRIES} attempts.")
-                # self.send_failure_notification_email(user_id, to_number, contact_id) # TODO implement this
+                self.send_failure_notification_email(user_id, to_number, email.message_id)
 
         except Exception as e:
             logger.error(f"An error occurred while checking status of the sent SMS {text_id}. Error = {e}")
@@ -209,7 +236,9 @@ class Command(BaseCommand):
         payload = {
             'phone': to_number,
             'message': message_body,
-            'key': settings.TEST_KEY, # TODO CHANGE THIS TO API_KEY
+            'key': settings.API_KEY,
+            'replyWebhookUrl': settings.REPLY_WEBHOOK_URL,
+            'webhookData' : generate_webhook_token({"timestamp": int(time.time())})
         }
 
         try:
@@ -239,10 +268,14 @@ class Command(BaseCommand):
             logger.error(f"Resend request failed: {str(e)}")
             return None
 
-    def send_failure_notification_email(self, user_id, to_number, contact_id):
-        subject = "SMS Delivery Failure Notification"
+    # TODO make this better
+    def send_failure_notification_email(self, user_id, to_number, message_id):
+        subject = "SMS Delivery Failure Notification\n"
         body = f"We were unable to deliver your SMS to {to_number}. Please try again later or contact support if the problem persists."
-        # process_emails(user_id, subject, body) # TODO implement this
+
+        message_content = subject + body
+
+        call_command('push_emails', message_id=message_id, message_content=message_content)
         logger.info(f"Sent failure notification email to user {user_id}")
 
     def check_quota(self, api_key):
@@ -260,6 +293,7 @@ class Command(BaseCommand):
             logger.error(f"Error checking quota: {str(e)}")
             return None
 
+    # Leaving this here as a reminder to include this logic in push email
     def handle_long_email_reply(self, user_id, subject, body):
         if len(body) > 13000:
             parts = [body[i:i + 13000] for i in range(0, len(body), 13000)]

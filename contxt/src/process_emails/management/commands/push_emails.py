@@ -39,6 +39,10 @@ class Command(BaseCommand):
     """
     help = 'Run the push email process to send replies.'
 
+    def add_arguments(self, parser):
+        parser.add_argument('--message_id', type=str, help='The ID of the message (optional).')
+        parser.add_argument('--message_content', type=str, help='The content of the message (optional).')
+
     def handle(self, *args, **kwargs):
         """
         Executes the command to send email replies.
@@ -52,11 +56,15 @@ class Command(BaseCommand):
         Returns:
             None
         """
+
+        message_id = kwargs.get('message_id')
+        message_content = kwargs.get('message_content')
+
         session = SessionManager.get_session()
         if not session:
             logger.error("Failed to retrieve session.")
             return
-        self.run_push_email(session=session)
+        self.run_push_email(session=session, message_id=message_id, message_content=message_content)
 
     def capture_session_state(self, session):
         """
@@ -185,7 +193,7 @@ class Command(BaseCommand):
         logger.error('----------------------------------')
         return False
 
-    def run_push_email(self, session=None):
+    def run_push_email(self, session=None, message_id=None, message_content=None):
         """
         Runs the push email process, retrieving messages from the database and sending replies.
 
@@ -206,6 +214,8 @@ class Command(BaseCommand):
             message_id = "3735999911"
             message_content = "This is a test reply message sent from local. Please ignore these messages. Apologies for any inconvenience."
             message_id_content.append([None, message_id, message_content])
+        elif message_id and message_content:
+            message_id_content.append([None, message_id, message_content])
         else:
             message_id_content = get_messages_to_send_from_database(message_id_content=message_id_content)
 
@@ -223,7 +233,7 @@ class Command(BaseCommand):
                 continue
 
             if success:
-                if not settings.TEST_MODE == True:
+                if not settings.TEST_MODE == True and not sms_id == None:
                     status = update_sms_processed_value(sms_id=sms_id)
                     if status:
                         logger.info('SMS processed value updated successfully.')

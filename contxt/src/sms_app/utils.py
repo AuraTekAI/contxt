@@ -3,6 +3,9 @@ from core.models import Contact
 from sms_app.models import SMS
 
 from django.conf import settings
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 import re
@@ -61,7 +64,7 @@ def generate_webhook_token(data):
     return serializer.dumps(data, salt=settings.SECRET_KEY)
 
 
-def validate_webhook_token(token, max_age=3600):
+def validate_webhook_token(token, max_age=86400):
     serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
     try:
         data = serializer.loads(token, salt=settings.SECRET_KEY, max_age=max_age)
@@ -87,3 +90,28 @@ def get_webhook_schema():
         required=['textId', 'fromNumber', 'text'] if not settings.TEST_MODE else ['textId', 'fromNumber', 'text']
     )
 
+def send_quota_limit_reached_notification(quota_limit):
+    """
+    Sends an email notification to a user when they have reached their quota limit.
+
+    Args:
+        quota_limit (int): The quota limit that has been reached.
+
+    Returns:
+        None
+    """
+    user_name = settings.ADMIN_EMAIL_NAME
+    to_email = settings.ADMIN_EMAIL_ADDRESS
+
+    subject = 'Quota Limit Reached'
+
+    html_message = render_to_string('emails/quota_limit_reached_notification_email.html', {
+        'user_name': user_name,
+        'quota_limit': quota_limit
+    })
+    plain_message = strip_tags(html_message)
+
+    from_email = settings.DEFAULT_FROM_EMAIL
+    recipient_list = [to_email]
+
+    send_mail(subject, plain_message, from_email, recipient_list, html_message=html_message)

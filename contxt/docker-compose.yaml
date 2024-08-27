@@ -75,7 +75,7 @@ services:
       sh -c "python /app/src/manage.py wait_for_db &&
          python /app/src/manage.py migrate &&
          celery -A contxt beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler &
-         celery -A contxt worker --loglevel=info --hostname=contxt_worker@%h -Q scheduling_queue,error_handler_queue -E"
+         celery -A contxt worker --loglevel=info --hostname=contxt_worker@%h -Q scheduling_queue,error_handler_queue,generic_email_queue -E"
     networks:
       - internal_network
 
