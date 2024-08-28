@@ -1,0 +1,39 @@
+{
+    "bots": [
+      {
+        "name": "BOT_1",
+        "email": "forestpineneedle@gmail.com",
+        "email_password": "ndfu ybud kxib tnzk",
+        "corrlinks_password": "ConsensusMessengerGays1",
+        "is_active" : true
+      },
+      {
+        "name": "BOT_2",
+        "email": "citylightpine@gmail.com",
+        "email_password": "lnah gcme dqae rkxm",
+        "corrlinks_password": "ConsensusMessengerGays1",
+        "is_active" : true
+      },
+      {
+        "name": "BOT_3",
+        "email": "goldenhourfly@gmail.com",
+        "email_password": "qggm fcry sfiy yqvo",
+        "corrlinks_password": "ConsensusMessengerGays1",
+        "is_active" : true
+      },
+      {
+        "name": "BOT_4",
+        "email": "coralreefglow@gmail.com",
+        "email_password": "nnal grch rhni xzxb",
+        "corrlinks_password": "ConsensusMessengerGays1",
+        "is_active" : true
+      },
+      {
+        "name": "BOT_5",
+        "email": "cloudninelight@gmail.com",
+        "email_password": "mxdc hndy fgwm zgeu",
+        "corrlinks_password": "ConsensusMessengerGays1",
+        "is_active" : true
+      }
+    ]
+}

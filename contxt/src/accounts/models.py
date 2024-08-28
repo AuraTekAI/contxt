@@ -254,3 +254,43 @@ class User(AbstractBaseUser, PermissionsMixin):
             models.Index(fields=['is_active']),
             models.Index(fields=['custom_email']),
         ]
+
+class BotAccount(models.Model):
+    """
+    Represents a bot account that interacts with Corrlinks.
+
+    Attributes:
+        bot_name (CharField): The name of the bot (e.g., 'bot1', 'bot2').
+        email_address (EmailField): The email address associated with the bot.
+        password (CharField): The password associated with the bot.
+        last_read_message_id (CharField): The MessageID of the last read email.
+        is_active (BooleanField): Indicates whether the bot is currently active.
+        created_at (DateTimeField): Timestamp when the bot account was created.
+        updated_at (DateTimeField): Timestamp when the bot account was last updated.
+    """
+
+    bot_name = models.CharField(max_length=50, unique=True, db_index=True)
+
+    email_address = models.EmailField(unique=True, db_index=True)
+    email_password = models.CharField(max_length=128, null=True, blank=True)
+    corrlinks_password = models.CharField(max_length=128, null=True, blank=True)
+
+    last_read_message_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+
+    is_active = models.BooleanField(default=True, db_index=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.bot_name
+
+    class Meta:
+        db_table = 'bot_accounts'
+        verbose_name = 'bot_account'
+        verbose_name_plural = 'bot_accounts'
+        indexes = [
+            models.Index(fields=['bot_name', 'is_active']),
+            models.Index(fields=['email_address']),
+            models.Index(fields=['last_read_message_id']),
+        ]

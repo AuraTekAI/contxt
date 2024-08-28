@@ -11,6 +11,7 @@ services:
       - log_files:/app/logs
       - staticfiles:/app/src/staticfiles
       - ./src/.env:/app/src/.env
+      - ./bot-accounts.json:/app/bot-accounts.json
     command: >
       sh -c "python /app/src/manage.py wait_for_db &&
              python /app/src/manage.py collectstatic --no-input &&
@@ -66,6 +67,7 @@ services:
     volumes:
       - log_files:/app/logs
       - ./src/.env:/app/src/.env
+      - ./bot-accounts.json:/app/bot-accounts.json
     env_file:
       - ./src/.env
     working_dir: /app/src

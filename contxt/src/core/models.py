@@ -1,8 +1,9 @@
 
-from accounts.models import User
+from accounts.models import User, BotAccount
 from contxt.utils.constants import *
 
 from django.db import models
+from django.utils import timezone
 
 class UserMessage(models.Model):
     """
@@ -143,4 +144,46 @@ class TransactionHistory(models.Model):
             models.Index(fields=['user', 'created_at']),
             models.Index(fields=['reference_id']),
             models.Index(fields=['status']),
+        ]
+
+
+class ProcessedData(models.Model):
+    """
+    Optimized model for tracking processed data across various modules handled by bots.
+
+    Attributes:
+        bot (ForeignKey): Reference to the BotAccount that processed the data.
+        module_name (CharField): The name of the module (e.g., 'SMS', 'Email').
+        original_message_id (CharField): The original message ID associated with the data.
+        status (CharField): The processing status (e.g., 'processed', 'pending').
+        processed_at (DateTimeField): The timestamp when the data was processed.
+        created_at (DateTimeField): Timestamp when the data record was created.
+    """
+    bot = models.ForeignKey(BotAccount, on_delete=models.CASCADE, db_index=True)
+
+    module_name = models.CharField(max_length=50, db_index=True)
+    original_message_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+
+    status = models.CharField(max_length=20, choices=PROCESSED_DATA_STATUS_CHOICES, db_index=True)
+
+    processed_at = models.DateTimeField(db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    def save(self, *args, **kwargs):
+        if not self.processed_at:
+            self.processed_at = timezone.now()
+        super(ProcessedData, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return f'{self.module_name} - {self.original_message_id} ({self.status})'
+
+    class Meta:
+        db_table = 'processed_data'
+        verbose_name = 'processed_data'
+        verbose_name_plural = 'processed_data'
+        indexes = [
+            models.Index(fields=['bot', 'module_name', 'status']),
+            models.Index(fields=['processed_at']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['bot', 'status']),
         ]

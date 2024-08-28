@@ -25,3 +25,8 @@ SMS_TABLE_SEED_DATA = {
     '3736625367' : [],
     '3736550349' : [],
 }
+
+"""
+PROCESSED DATA CONSTANTS
+"""
+PROCESSED_DATA_STATUS_CHOICES = [('processed', 'Processed'), ('pending', 'Pending')]
