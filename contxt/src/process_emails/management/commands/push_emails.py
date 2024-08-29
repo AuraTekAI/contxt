@@ -42,6 +42,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--message_id', type=str, help='The ID of the message (optional).')
         parser.add_argument('--message_content', type=str, help='The content of the message (optional).')
+        parser.add_argument('--bot_id', type=int, help='The bot id for the bot executing tasks.')
 
     def handle(self, *args, **kwargs):
         """
@@ -59,12 +60,15 @@ class Command(BaseCommand):
 
         message_id = kwargs.get('message_id')
         message_content = kwargs.get('message_content')
+        bot_id = kwargs.get('bot_id')
 
-        session = SessionManager.get_session()
-        if not session:
-            logger.error("Failed to retrieve session.")
-            return
-        self.run_push_email(session=session, message_id=message_id, message_content=message_content)
+        logger.info(f'Push Email got bot id = {bot_id} ')
+
+        # session = SessionManager.get_session()
+        # if not session:
+        #     logger.error("Failed to retrieve session.")
+        #     return
+        # self.run_push_email(session=session, message_id=message_id, message_content=message_content)
 
     def capture_session_state(self, session):
         """

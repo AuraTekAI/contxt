@@ -24,22 +24,28 @@ SMS_DIRECTION_CHOICES_DICT = dict(SMS_DIRECTION_CHOICES)
 class Command(BaseCommand):
     help = 'Process and send SMS messages'
 
+    def add_arguments(self, parser):
+        parser.add_argument('--bot_id', type=int, help='The bot id for the bot executing tasks.')
+
     def handle(self, *args, **kwargs):
         logger.info("Starting SMS processing")
 
-        quota = self.check_quota(settings.API_KEY)
-        if quota is not None:
-            sms_quota_logger.info(f"Current SMS quota: {quota}")
-            if quota == 0:
-                send_quota_limit_reached_email_task.delay(quota)
-            else:
-                logger.info("SMS sending process Started")
+        bot_id = kwargs.get('bot_id')
+        logger.info(f'Send sms got bot id = {bot_id} ')
 
-                self.send_sms()
+        # quota = self.check_quota(settings.API_KEY)
+        # if quota is not None:
+        #     sms_quota_logger.info(f"Current SMS quota: {quota}")
+        #     if quota == 0:
+        #         send_quota_limit_reached_email_task.delay(quota)
+        #     else:
+        #         logger.info("SMS sending process Started")
 
-                logger.info("SMS processing completed")
-        else:
-            sms_quota_logger.error('Error occured while getting quota value from textbelt. Skipping execution of send sms.')
+        #         self.send_sms()
+
+        #         logger.info("SMS processing completed")
+        # else:
+        #     sms_quota_logger.error('Error occured while getting quota value from textbelt. Skipping execution of send sms.')
 
     def send_sms(self, user_id=None, contact_id=None, to_number=None, message_body=None, message_id=None):
         if user_id and contact_id:

@@ -22,6 +22,9 @@ HEADERS['Referer'] = settings.INBOX_URL
 class Command(BaseCommand):
     help = 'Process unread emails from the Corrlinks inbox'
 
+    def add_arguments(self, parser):
+        parser.add_argument('--bot_id', type=int, help='The bot id for the bot executing tasks.')
+
     def handle(self, *args, **options):
         """
         Main command handler to process unread emails from the Corrlinks inbox.
@@ -47,122 +50,126 @@ class Command(BaseCommand):
         Logs:
             - Information, warnings, and errors are logged at various steps of the process.
         """
-        # Retrieve session from another command
-        logger.info('Fetching session via Login service...')
 
-        session = SessionManager.get_session()
-        if not session:
-            logger.error("Failed to retrieve session.")
-            return
+        bot_id = options.get('bot_id')
+        logger.info(f'Pull Email got bot id = {bot_id} ')
 
-        logger.info(f"Attempting to fetch inbox page: {settings.INBOX_URL}")
-        try:
-            response = session.get(settings.INBOX_URL)
-            logger.info(f"Inbox page response status code: {response.status_code}")
+        # # Retrieve session from another command
+        # logger.info('Fetching session via Login service...')
 
-            if response.status_code != 200:
-                logger.error(f"Failed to fetch the inbox page, status code: {response.status_code}")
-                return
+        # session = SessionManager.get_session()
+        # if not session:
+        #     logger.error("Failed to retrieve session.")
+        #     return
 
-            parser = LexborHTMLParser(response.text)
-            compressed_viewstate = parser.css_first(settings.COMPRESSED_VIEWSTATE_ID)
+        # logger.info(f"Attempting to fetch inbox page: {settings.INBOX_URL}")
+        # try:
+        #     response = session.get(settings.INBOX_URL)
+        #     logger.info(f"Inbox page response status code: {response.status_code}")
 
-            if compressed_viewstate:
-                compressed_viewstate_value = compressed_viewstate.attributes.get('value', '')
-                logger.debug(f"COMPRESSEDVIEWSTATE found, length: {len(compressed_viewstate_value)}")
-            else:
-                logger.error("COMPRESSEDVIEWSTATE not found in the HTML.")
-                return
+        #     if response.status_code != 200:
+        #         logger.error(f"Failed to fetch the inbox page, status code: {response.status_code}")
+        #         return
 
-            email_rows = parser.css(settings.EMAIL_ROWS_CSS_SELECTOR)
-            logger.info(f"Found {len(email_rows)} email rows")
+        #     parser = LexborHTMLParser(response.text)
+        #     compressed_viewstate = parser.css_first(settings.COMPRESSED_VIEWSTATE_ID)
 
-            if not email_rows:
-                logger.error("No email rows found.")
-                return
+        #     if compressed_viewstate:
+        #         compressed_viewstate_value = compressed_viewstate.attributes.get('value', '')
+        #         logger.debug(f"COMPRESSEDVIEWSTATE found, length: {len(compressed_viewstate_value)}")
+        #     else:
+        #         logger.error("COMPRESSEDVIEWSTATE not found in the HTML.")
+        #         return
 
-            emails_to_save = []
+        #     email_rows = parser.css(settings.EMAIL_ROWS_CSS_SELECTOR)
+        #     logger.info(f"Found {len(email_rows)} email rows")
 
-            for i, row in enumerate(email_rows):
-                logger.debug(f"Processing email row {i+1}")
-                if settings.TEST_MODE and i >= 3:
-                    logger.info("Test mode: stopping after 3 emails")
-                    break
+        #     if not email_rows:
+        #         logger.error("No email rows found.")
+        #         return
 
-                row_html = row.html
-                message_id_match = re.search(r'(Command="REPLY"\s+MessageId="(\d+)"|messageid="(\d+)")', row_html, re.IGNORECASE)
+        #     emails_to_save = []
 
-                if message_id_match:
-                    message_id = message_id_match.group(2) or message_id_match.group(3)
-                    logger.debug(f"Found MessageId: {message_id}")
-                else:
-                    message_id = None
-                    logger.error(f"MessageId not found in row {i+1}.")
+        #     for i, row in enumerate(email_rows):
+        #         logger.debug(f"Processing email row {i+1}")
+        #         if settings.TEST_MODE and i >= 3:
+        #             logger.info("Test mode: stopping after 3 emails")
+        #             break
 
-                from_elem = row.css_first(settings.FROM_ELEMENT_CSS_SELECTOR)
-                subject_elem = row.css_first(settings.SUBJECT_ELEMENT_CSS_SELECTOR)
-                date_elem = row.css_first(settings.DATE_ELEMENT_CSS_SELECTOR)
+        #         row_html = row.html
+        #         message_id_match = re.search(r'(Command="REPLY"\s+MessageId="(\d+)"|messageid="(\d+)")', row_html, re.IGNORECASE)
 
-                from_text = from_elem.text() if from_elem else 'Not found'
-                subject_text = subject_elem.text() if subject_elem else 'Not found'
-                date_text = date_elem.text() if date_elem else 'Not found'
+        #         if message_id_match:
+        #             message_id = message_id_match.group(2) or message_id_match.group(3)
+        #             logger.debug(f"Found MessageId: {message_id}")
+        #         else:
+        #             message_id = None
+        #             logger.error(f"MessageId not found in row {i+1}.")
 
-                logger.info(f"Extracted email data: MessageId={message_id}, From={from_text}, Subject={subject_text}, Date={date_text}")
+        #         from_elem = row.css_first(settings.FROM_ELEMENT_CSS_SELECTOR)
+        #         subject_elem = row.css_first(settings.SUBJECT_ELEMENT_CSS_SELECTOR)
+        #         date_elem = row.css_first(settings.DATE_ELEMENT_CSS_SELECTOR)
 
-                if message_id:
-                    post_data = {
-                        '__EVENTTARGET': settings.PULL_EMAIL_EVENTTARGET,
-                        '__EVENTARGUMENT': f'rc{i}',
-                        '__COMPRESSEDVIEWSTATE': compressed_viewstate_value,
-                        '__ASYNCPOST': settings.ASYNCPOST,
-                        'ctl00$topScriptManager': settings.TOPSCRIPTMANAGER
-                    }
+        #         from_text = from_elem.text() if from_elem else 'Not found'
+        #         subject_text = subject_elem.text() if subject_elem else 'Not found'
+        #         date_text = date_elem.text() if date_elem else 'Not found'
 
-                    form = MultipartEncoder(fields=post_data)
-                    headers = HEADERS.copy()
-                    headers['Content-Type'] = form.content_type
+        #         logger.info(f"Extracted email data: MessageId={message_id}, From={from_text}, Subject={subject_text}, Date={date_text}")
 
-                    logger.info(f"Sending POST request for email {message_id}")
-                    email_response = session.post(settings.INBOX_URL, data=form.to_string(), headers=headers)
-                    logger.info(f"Email response status code: {email_response.status_code}")
+        #         if message_id:
+        #             post_data = {
+        #                 '__EVENTTARGET': settings.PULL_EMAIL_EVENTTARGET,
+        #                 '__EVENTARGUMENT': f'rc{i}',
+        #                 '__COMPRESSEDVIEWSTATE': compressed_viewstate_value,
+        #                 '__ASYNCPOST': settings.ASYNCPOST,
+        #                 'ctl00$topScriptManager': settings.TOPSCRIPTMANAGER
+        #             }
 
-                    if email_response.status_code == 200:
-                        email_content = self.parse_ajax_response(email_response.text)
-                        if email_content:
-                            email_data = self.process_email_content(email_content, message_id)
-                            if email_data:
-                                user_id = get_or_create_user(email_data)
-                                if user_id:
-                                    email_to_save = {
-                                        'user_id': user_id,
-                                        'sent_datetime': email_data['date'],
-                                        'subject': email_data['subject'],
-                                        'body': email_data['message'],
-                                        'message_id': email_data['message_id']
-                                    }
-                                    emails_to_save.append(email_to_save)
-                                    logger.info(f"Processed email: {email_to_save}")
-                                else:
-                                    logger.warning(f"Failed to ensure user exists for email: {email_data['message_id']}")
-                            else:
-                                logger.warning(f"Failed to process email content for message ID {message_id}")
-                        else:
-                            logger.error(f"Failed to parse AJAX response for message ID {message_id}")
-                    else:
-                        logger.error(f"Failed to fetch email content, status code: {email_response.status_code}")
+        #             form = MultipartEncoder(fields=post_data)
+        #             headers = HEADERS.copy()
+        #             headers['Content-Type'] = form.content_type
 
-                else:
-                    logger.warning(f"Failed to extract message ID for email {i+1}")
+        #             logger.info(f"Sending POST request for email {message_id}")
+        #             email_response = session.post(settings.INBOX_URL, data=form.to_string(), headers=headers)
+        #             logger.info(f"Email response status code: {email_response.status_code}")
 
-                if settings.TEST_MODE and i >= 2:
-                    logger.info("Test mode: stopping after 3 emails")
-                    break
+        #             if email_response.status_code == 200:
+        #                 email_content = self.parse_ajax_response(email_response.text)
+        #                 if email_content:
+        #                     email_data = self.process_email_content(email_content, message_id)
+        #                     if email_data:
+        #                         user_id = get_or_create_user(email_data)
+        #                         if user_id:
+        #                             email_to_save = {
+        #                                 'user_id': user_id,
+        #                                 'sent_datetime': email_data['date'],
+        #                                 'subject': email_data['subject'],
+        #                                 'body': email_data['message'],
+        #                                 'message_id': email_data['message_id']
+        #                             }
+        #                             emails_to_save.append(email_to_save)
+        #                             logger.info(f"Processed email: {email_to_save}")
+        #                         else:
+        #                             logger.warning(f"Failed to ensure user exists for email: {email_data['message_id']}")
+        #                     else:
+        #                         logger.warning(f"Failed to process email content for message ID {message_id}")
+        #                 else:
+        #                     logger.error(f"Failed to parse AJAX response for message ID {message_id}")
+        #             else:
+        #                 logger.error(f"Failed to fetch email content, status code: {email_response.status_code}")
 
-            if emails_to_save:
-                save_emails(emails_to_save)
+        #         else:
+        #             logger.warning(f"Failed to extract message ID for email {i+1}")
 
-        except Exception as e:
-            logger.error(f"An error occurred while processing emails: {str(e)}", exc_info=True)
+        #         if settings.TEST_MODE and i >= 2:
+        #             logger.info("Test mode: stopping after 3 emails")
+        #             break
+
+        #     if emails_to_save:
+        #         save_emails(emails_to_save)
+
+        # except Exception as e:
+        #     logger.error(f"An error occurred while processing emails: {str(e)}", exc_info=True)
 
     def parse_ajax_response(self, response_text):
         """

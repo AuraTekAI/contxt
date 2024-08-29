@@ -1,5 +1,5 @@
 
-from core.models import User
+from core.models import User, BotAccount
 
 from django.contrib import admin
 from django.contrib.auth.models import Group
@@ -73,6 +73,22 @@ class AccountAdmin(UserAdmin):
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser")}),
     )
 
+class BotAccountAdmin(admin.ModelAdmin):
+    """
+    Admin interface for managing BotAccount records.
+
+    Provides functionality to view, edit, and manage BotAccount records.
+    """
+
+    list_display = (
+        'bot_name',
+        'email_address',
+        'last_read_message_id',
+        'is_active',
+        'created_at',
+        'updated_at',
+    )
 
 # Register the customized admin class with the User model
 admin.site.register(User, AccountAdmin)
+admin.site.register(BotAccount, BotAccountAdmin)

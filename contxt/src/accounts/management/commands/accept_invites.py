@@ -4,7 +4,7 @@ from accounts.utils import get_email_password_url
 from accounts.login_service import SessionManager
 from contxt.utils.helper_functions import get_lua_script_absolute_path, save_screenshots_to_local
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandParser
 
 from process_emails.utils import convert_cookies_to_splash_format
 
@@ -13,15 +13,23 @@ from django.conf import settings
 
 import logging
 import json
+import sys
 
 logger = logging.getLogger('accpet_invite')
 
 class Command(BaseCommand):
     help = 'Process invitation codes from emails and accept them in Corrlinks.'
 
+    def add_arguments(self, parser):
+        parser.add_argument('--bot_id', type=int)
+
     def handle(self, *args, **options):
-        result = process_invitation()
-        logger.info(f"Invitation processing result: {result}")
+        bot_id = options.get('bot_id')
+
+        logger.info(f'Accept invite got bot id = {bot_id} ')
+
+        # result = process_invitation()
+        # logger.info(f"Invitation processing result: {result}")
 
 def log_request_info(url, method, headers, data=None, params=None, cookies=None):
     """
