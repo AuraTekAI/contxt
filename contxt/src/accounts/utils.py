@@ -1,5 +1,5 @@
 
-from accounts.models import User
+from accounts.models import User, BotAccount
 
 from django.conf import settings
 
@@ -8,6 +8,13 @@ import logging
 
 
 pull_email_logger = logging.getLogger('pull_email')
+
+
+# Currently only two email urls, can keep expanding this as required
+MAP_EMAIL_URL_TO_EMAIL_SEARCH_STRINGS = {
+    'smtp.gmail.com' : [settings.GMAIL_SEARCH_STRING, settings.GMAIL_BROADER_SEARCH_STRING,],
+    'mail.contxts.net' : [settings.CONTXT_MAIL_SEARCH_STRING, settings.CONTXT_MAIL_BROADER_SEARCH_STRING]
+}
 
 
 def get_or_create_user(email_data=None):
@@ -61,28 +68,45 @@ def get_or_create_user(email_data=None):
 
     return user
 
-def get_email_password_url():
+def get_email_password_url(bot_id=None):
     """
-    Retrieves email credentials and URL based on the configuration settings.
+    Retrieves email credentials based on the provided bot ID.
 
-    Depending on whether alternate email settings are used, this function returns a list containing
-    the email username, password, and URL for accessing the email service.
+    This function fetches the email address and password associated with a given bot ID
+    from the database. The function ensures that the `bot_id` is provided, and if a
+    corresponding bot account is found, it returns the associated email address and password.
+
+    Args:
+        bot_id (int, optional): The unique identifier for the bot. This parameter is
+        required to fetch the corresponding email credentials.
 
     Returns:
-        list: A list containing email username, password, and URL.
+        tuple: A tuple containing the email address, password and email url associated with the bot ID.
+               If the `bot_id` is None or no bot account is found, it returns a tuple
+               with all values set to `None`.
+
+    Raises:
+        ValueError: If `bot_id` is None, an error message is printed and the function
+        returns a tuple with all values set to `None`.
     """
-    if settings.USE_ALTERNATE_EMAIL:
-        user_name = settings.ALTERNATE_EMAIL_USERNAME
-        password = settings.ALTERNATE_EMAIL_PASSWORD
-        email_Url = settings.ALTERNATE_EMIALURL
-    else:
-        user_name = settings.EMAIL_USERNAME
-        password = settings.EMAIL_PASSWORD
-        email_Url = settings.EMAILURL
+    email_address = None
+    email_url = None
+    password = None
 
-    return [user_name, password, email_Url]
+    if bot_id == None:
+        print(f'{bot_id}. bot_id cannot be null')
+        return email_address, password, email_url
 
-def get_username_password():
+    bot_obj = BotAccount.objects.filter(id=bot_id).first()
+    if bot_obj:
+        email_address = bot_obj.email_address
+        password = bot_obj.email_password
+        email_url = bot_obj.email_url
+
+    return email_address, password, email_url
+
+
+def get_username_password(bot_id=None):
     """
     Retrieves login credentials based on the configuration settings.
 
@@ -92,12 +116,17 @@ def get_username_password():
     Returns:
         list: A list containing the username and password.
     """
-    if settings.USE_ALTERNATE_LOGIN_DETAILS:
-        user_name = settings.ALTERNATE_USERNAME
-        password = settings.ALTERNATE_PASSWORD
-    else:
-        user_name = settings.USERNAME
-        password = settings.PASSWORD
+    email_address = None
+    password = None
 
-    return [user_name, password]
+    if bot_id == None:
+        print(f'{bot_id}. bot_id cannot be null')
+        return email_address, password
+
+    bot_obj = BotAccount.objects.filter(id=bot_id).first()
+    if bot_obj:
+        email_address = bot_obj.email_address
+        password = bot_obj.corrlinks_password
+
+    return email_address, password
 

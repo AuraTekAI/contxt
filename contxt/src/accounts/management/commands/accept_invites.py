@@ -1,6 +1,6 @@
 
 from accounts.mail_service import MailBox
-from accounts.utils import get_email_password_url
+from accounts.utils import get_email_password_url, MAP_EMAIL_URL_TO_EMAIL_SEARCH_STRINGS
 from accounts.login_service import SessionManager
 from contxt.utils.helper_functions import get_lua_script_absolute_path, save_screenshots_to_local
 
@@ -28,8 +28,8 @@ class Command(BaseCommand):
 
         logger.info(f'Accept invite got bot id = {bot_id} ')
 
-        # result = process_invitation()
-        # logger.info(f"Invitation processing result: {result}")
+        result = process_invitation(bot_id=bot_id)
+        logger.info(f"Invitation processing result: {result}")
 
 def log_request_info(url, method, headers, data=None, params=None, cookies=None):
     """
@@ -120,7 +120,7 @@ def log_response_info(response, is_splash_request=False):
 
     logger.info("=====================")
 
-def fetch_invite_code_and_name():
+def fetch_invite_code_and_name(bot_id=None):
     """
     Fetches invitation codes and full names from recent emails.
 
@@ -157,19 +157,23 @@ def fetch_invite_code_and_name():
 
     try:
         # Retrieve email credentials and URL
-        user_name, password, email_Url = get_email_password_url()
+        user_name, password, email_Url = get_email_password_url(bot_id=bot_id)
+
+        if user_name is None and password is None and email_Url is None:
+            return invite_code_full_name_data
 
         # Use the MailBox class within a context manager to ensure proper cleanup
         with MailBox(user_name, password, email_Url) as mailbox:
             # Select the inbox folder
             mailbox.get_inbox()
 
+            search_string = MAP_EMAIL_URL_TO_EMAIL_SEARCH_STRINGS[email_Url]
             # Search for emails based on specific days and text criteria
-            invite_email_ids = mailbox.search_mail_using_date_text_value(settings.MAIL_SEARCH_DAYS_VALUE, settings.MAIL_SEARCH_STRING)
+            invite_email_ids = mailbox.search_mail_using_date_text_value(settings.MAIL_SEARCH_DAYS_VALUE, search_string[0])
 
             # If no emails are found with the primary search string, broaden the search
             if not invite_email_ids:
-                invite_email_ids = mailbox.search_mail_using_date_text_value(settings.MAIL_SEARCH_DAYS_VALUE, settings.MAIL_BROADER_SEARCH_STRING)
+                invite_email_ids = mailbox.search_mail_using_date_text_value(settings.MAIL_SEARCH_DAYS_VALUE, search_string[1])
 
             # If emails are found, sort them by ID in descending order
             if invite_email_ids:
@@ -331,7 +335,7 @@ def navigate_enter_code_accept_invite(session, invitation_code=None, email_id=No
     logger.error(f'Something went wrong in navigate_enter_code_accept_invite function. Check the logs above for more details.\n')
     return None
 
-def process_invitation():
+def process_invitation(bot_id=None):
     """
     Manages the complete process of fetching invitation codes from emails, logging into Corrlinks,
     and submitting the codes to accept pending invitations.
@@ -366,12 +370,12 @@ def process_invitation():
        - Each key in the dictionary represents an invitation code, and the value indicates whether it was successfully processed or not.
     """
     logger.info("Starting the invitation processing")
-    invite_codes_dict = fetch_invite_code_and_name()
+    invite_codes_dict = fetch_invite_code_and_name(bot_id=bot_id)
     if not invite_codes_dict or invite_codes_dict == {}:
         logger.error("Failed to fetch invite code")
         return False
 
-    session = SessionManager.get_session()
+    session = SessionManager.get_session(bot_id=bot_id)
     if not session:
         logger.error("Failed to login to Corrlinks")
         return False

@@ -274,6 +274,7 @@ class BotAccount(models.Model):
     email_address = models.EmailField(unique=True, db_index=True)
     email_password = models.CharField(max_length=128, null=True, blank=True)
     corrlinks_password = models.CharField(max_length=128, null=True, blank=True)
+    email_url = models.CharField(max_length=128, null=True, blank=True)
 
     last_read_message_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
 

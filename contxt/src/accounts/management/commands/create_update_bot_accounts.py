@@ -70,6 +70,7 @@ class Command(BaseCommand):
                     'bot_name': bot_config['name'],
                     'email_password': bot_config['email_password'],
                     'corrlinks_password' : bot_config['corrlinks_password'],
+                    'email_url' : bot_config['email_url'],
                     'is_active' : bot_config['is_active']
                 }
             )

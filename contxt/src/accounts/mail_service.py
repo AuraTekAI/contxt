@@ -237,7 +237,7 @@ class MailBox:
                 if isinstance(response_part, tuple):
                     msg = email.message_from_bytes(response_part[1])
                     subject, date = self.extract_subject_and_date(msg)
-                    if "Person in Custody:" in subject:
+                    if "Person in Custody:" in subject or "Person in" in subject:
                         body = self.get_email_body(msg)
                         invite_code, full_name = self.extract_invite_code_and_name(subject, body)
                         if invite_code and full_name:

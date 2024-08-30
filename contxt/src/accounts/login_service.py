@@ -21,48 +21,78 @@ class SessionManager:
       It is initialized to `None` and set during the first call to `get_session()`.
 
     Methods:
-    - get_session(cls):
-        Retrieves the current session. If no session exists, initializes a new session by logging in.
+    - get_session(cls, bot_id):
+        Retrieves the current session for the specified bot. If no session exists, initializes a
+        new session by logging in with the credentials associated with the given `bot_id`.
+
+        Args:
+            bot_id (str): The bot ID used to fetch the appropriate credentials.
+
         Returns:
             requests.Session: The session object for interacting with the Corrlinks website.
+            If login fails, `None` is returned.
 
-    - _login_to_corrlinks(cls):
-        Handles the login process to the Corrlinks website. This includes sending login credentials,
-        managing headers, handling proxies, and parsing hidden form fields.
+    - _login_to_corrlinks(cls, bot_id):
+        Handles the login process to the Corrlinks website using credentials associated with the
+        specified `bot_id`. This includes sending login credentials, managing headers, handling
+        proxies, and parsing hidden form fields.
+
+        This method performs the following steps:
+        1. Retrieves login credentials using `get_username_password(bot_id)`.
+        2. Configures the session, including setting headers and proxies if needed.
+        3. Fetches the login page and parses hidden form fields.
+        4. Submits the login form with credentials and additional hidden fields.
+
+        Args:
+            bot_id (str): The bot ID used to fetch the appropriate credentials.
+
         Returns:
-            requests.Session: The session object if login is successful, otherwise `None`.
+            requests.Session: The session object if login is successful.
+            None: If login fails or an error occurs.
     """
 
     _session = None
 
     @classmethod
-    def get_session(cls):
+    def get_session(cls, bot_id):
         """
-        Retrieves the session object for interacting with the Corrlinks website. Initializes a new
-        session if none exists.
+        Manages a single session for interacting with the Corrlinks website, including handling
+        login and session management.
 
-        This method is designed to ensure that there is a valid session available for making
-        requests to the Corrlinks website. It initializes the session by calling `_login_to_corrlinks()`
-        if the session is not already set.
+        Attributes:
+        - _session (requests.Session, optional): A class-level attribute that holds the session instance.
+        It is initialized to `None` and set during the first call to `get_session()`.
 
-        Returns:
-            requests.Session: The session object if it is available or has been successfully created.
+        Methods:
+        - get_session(cls, bot_id):
+            Retrieves the current session. If no session exists, initializes a new session by logging in.
+            Returns:
+                requests.Session: The session object for interacting with the Corrlinks website.
+
+        - _login_to_corrlinks(cls, bot_id):
+            Handles the login process to the Corrlinks website. This includes sending login credentials,
+            managing headers, handling proxies, and parsing hidden form fields.
+            Returns:
+                requests.Session: The session object if login is successful, otherwise `None`.
         """
         if cls._session is None:
-            cls._session = cls._login_to_corrlinks()
+            cls._session = cls._login_to_corrlinks(bot_id)
         return cls._session
 
     @classmethod
-    def _login_to_corrlinks(cls):
+    def _login_to_corrlinks(cls, bot_id):
         """
         Handles the login process to the Corrlinks website.
 
         This method performs the following steps:
-        1. Retrieves login credentials using `get_username_password()`.
+        1. Retrieves login credentials using `get_username_password(bot_id)`.
         2. Configures the session, including setting headers and proxies if needed.
         3. Fetches the login page and parses hidden form fields.
         4. Submits the login form with credentials and additional hidden fields.
         5. Returns the session object if login is successful or `None` if it fails.
+
+        Args:
+            bot_id (str): The bot ID to be used for fetching credentials.
 
         Returns:
             requests.Session: The session object if login is successful.
@@ -70,7 +100,7 @@ class SessionManager:
         """
         try:
             # Retrieve credentials
-            user_name, password = get_username_password()
+            user_name, password = get_username_password(bot_id=bot_id)
             req = requests.Session()
             req.headers.update({
                 'User-Agent': settings.LOGIN_REQUEST_HEADER
