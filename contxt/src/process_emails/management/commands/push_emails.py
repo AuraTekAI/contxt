@@ -64,11 +64,11 @@ class Command(BaseCommand):
 
         logger.info(f'Push Email got bot id = {bot_id} ')
 
-        # session = SessionManager.get_session()
-        # if not session:
-        #     logger.error("Failed to retrieve session.")
-        #     return
-        # self.run_push_email(session=session, message_id=message_id, message_content=message_content)
+        session = SessionManager.get_session(bot_id=bot_id)
+        if not session:
+            logger.error(f"Failed to retrieve session for bot = {bot_id}.")
+            return
+        self.run_push_email(session=session, message_id=message_id, message_content=message_content, bot_id=bot_id)
 
     def capture_session_state(self, session):
         """
@@ -197,7 +197,7 @@ class Command(BaseCommand):
         logger.error('----------------------------------')
         return False
 
-    def run_push_email(self, session=None, message_id=None, message_content=None):
+    def run_push_email(self, session=None, message_id=None, message_content=None, bot_id=None):
         """
         Runs the push email process, retrieving messages from the database and sending replies.
 
@@ -221,7 +221,7 @@ class Command(BaseCommand):
         elif message_id and message_content:
             message_id_content.append([None, message_id, message_content])
         else:
-            message_id_content = get_messages_to_send_from_database(message_id_content=message_id_content)
+            message_id_content = get_messages_to_send_from_database(message_id_content=message_id_content, bot_id=bot_id)
 
         if not message_id_content:
             logger.info('No SMS messages found to process at the moment.')

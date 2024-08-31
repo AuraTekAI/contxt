@@ -1,6 +1,7 @@
 
 from process_emails.models import Email
 from sms_app.models import SMS
+from accounts.models import BotAccount
 
 from django.conf import settings
 
@@ -60,12 +61,14 @@ def save_emails(emails_to_save=None):
 
     for email in emails_to_save:
         try:
+            bot_obj = BotAccount.objects.filter(id=email['bot_id']).first()
             Email.objects.create(
                 user=email['user_id'],
                 message_id=email['message_id'],
                 sent_date_time=convert_string_to_valid_datetime(email['sent_datetime']),
                 subject=email['subject'],
-                body=email['body']
+                body=email['body'],
+                bot=bot_obj
             )
         except Exception as e:
             pull_email_logger.error(f'Error occurred while saving Email to database: {email} {e}')
@@ -105,7 +108,7 @@ def convert_cookies_to_splash_format(splash_cookies=None, cookies=None):
     else:
         return False
 
-def get_messages_to_send_from_database(message_id_content=[]):
+def get_messages_to_send_from_database(message_id_content=[], bot_id=None):
     """
     Retrieves unprocessed SMS messages from the database and collects corresponding email data.
 
@@ -121,10 +124,11 @@ def get_messages_to_send_from_database(message_id_content=[]):
         - For each unprocessed SMS, retrieves the associated email object to get the message ID.
         - Appends a list containing SMS ID, email message ID, and message content to `message_id_content` for each unprocessed SMS.
     """
-    unprocessed_sms_objects = SMS.objects.filter(is_processed=False, direction='Inbound').all()
+    bot_obj = BotAccount.objects.filter(id=bot_id).first()
+    unprocessed_sms_objects = SMS.objects.filter(is_processed=False, direction='Inbound', bot=bot_obj).all()
     if unprocessed_sms_objects:
         for unprocessed_sms in unprocessed_sms_objects:
-            email_obj = Email.objects.filter(id=unprocessed_sms.email.id).first()
+            email_obj = Email.objects.filter(id=unprocessed_sms.email.id, bot=bot_obj).first()
             if email_obj:
                 message_id_content.append([unprocessed_sms.id, email_obj.message_id, unprocessed_sms.message])
     return message_id_content

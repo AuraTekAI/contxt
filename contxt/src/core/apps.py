@@ -32,7 +32,7 @@ class CoreConfig(AppConfig):
 
                 # Create or get an existing interval schedule that runs every 10 minutes
                 schedule, _ = IntervalSchedule.objects.get_or_create(
-                    every=10,
+                    every=settings.BOT_TASK_INTERVAL_VALUE,
                     period=IntervalSchedule.MINUTES
                 )
 

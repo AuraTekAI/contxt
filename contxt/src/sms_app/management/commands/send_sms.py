@@ -33,15 +33,15 @@ class Command(BaseCommand):
         bot_id = kwargs.get('bot_id')
         logger.info(f'Send sms got bot id = {bot_id} ')
 
-        # quota = self.check_quota(settings.API_KEY)
-        # if quota is not None:
-        #     sms_quota_logger.info(f"Current SMS quota: {quota}")
-        #     if quota == 0:
-        #         send_quota_limit_reached_email_task.delay(quota)
-        #     else:
-        #         logger.info("SMS sending process Started")
+        quota = self.check_quota(settings.API_KEY)
+        if quota is not None:
+            sms_quota_logger.info(f"Current SMS quota: {quota}")
+            if quota == 0:
+                send_quota_limit_reached_email_task.delay(quota)
+            else:
+                logger.info(f"SMS sending process Started for bot = {bot_id}")
 
-        #         self.send_sms()
+                # self.send_sms()
 
         #         logger.info("SMS processing completed")
         # else:

@@ -29,7 +29,7 @@ class Command(BaseCommand):
         logger.info(f'Accept invite got bot id = {bot_id} ')
 
         result = process_invitation(bot_id=bot_id)
-        logger.info(f"Invitation processing result: {result}")
+        logger.info(f"Invitation processing result for bot {bot_id}: {result}")
 
 def log_request_info(url, method, headers, data=None, params=None, cookies=None):
     """
@@ -151,7 +151,7 @@ def fetch_invite_code_and_name(bot_id=None):
     Error Handling:
     - Logs and returns None if an error occurs during any of the steps.
     """
-    logger.info("Starting to fetch invite code and name")  # Log the start of the fetching process
+    logger.info(f"Starting to fetch invite code and name for bot {bot_id}")  # Log the start of the fetching process
 
     invite_code_full_name_data = {}  # Dictionary to store invite codes and associated full names
 
@@ -180,7 +180,7 @@ def fetch_invite_code_and_name(bot_id=None):
                 invite_email_ids = mailbox.sort_email_ids(email_ids=invite_email_ids)
             else:
                 # Log and exit if no invite emails are found
-                logger.info("No invite found in any emails")
+                logger.info(f"No invite found in any emails for bot = {bot_id}")
                 return None
 
             # Iterate over the sorted email IDs and process each email
@@ -199,7 +199,7 @@ def fetch_invite_code_and_name(bot_id=None):
             return invite_code_full_name_data
     except Exception as e:
         # Log any errors that occur during the process
-        logger.error(f"An error occurred while fetching invite: {str(e)}")
+        logger.error(f"An error occurred while fetching invite for bot = {bot_id}: {str(e)}")
         return None
 
 
@@ -369,15 +369,15 @@ def process_invitation(bot_id=None):
        - Returns the `response_dict`, which contains the processing status for each invitation code.
        - Each key in the dictionary represents an invitation code, and the value indicates whether it was successfully processed or not.
     """
-    logger.info("Starting the invitation processing")
+    logger.info(f"Starting the invitation processing for bot = {bot_id}")
     invite_codes_dict = fetch_invite_code_and_name(bot_id=bot_id)
     if not invite_codes_dict or invite_codes_dict == {}:
-        logger.error("Failed to fetch invite code")
+        logger.info("No new invites found in mail. Check logs above this for more details.")
         return False
 
     session = SessionManager.get_session(bot_id=bot_id)
     if not session:
-        logger.error("Failed to login to Corrlinks")
+        logger.error(f"Failed to login to Corrlinks for bot = {bot_id}")
         return False
 
     logger.info(f"Session cookies after login: {dict(session.cookies)}")
@@ -390,6 +390,7 @@ def process_invitation(bot_id=None):
     for invite_code, value in invite_codes_dict.items():
         email_id = value[1]
         invite_code = invite_code
+        logger.info(f"Starting navigating enter code for bot = {bot_id}")
         response_value = navigate_enter_code_accept_invite(session=session, invitation_code=invite_code, email_id=email_id, lua_script=lua_script)
 
         if not response_value == None:
@@ -400,5 +401,5 @@ def process_invitation(bot_id=None):
         else:
             logger.info(f'Output for {invite_code} = {response_value}')
             response_dict[invite_code] = response_value
-
+    logger.info(f"Ended navigating enter code for bot = {bot_id}")
     return response_dict
