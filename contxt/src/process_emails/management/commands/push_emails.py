@@ -2,6 +2,7 @@
 from accounts.login_service import SessionManager
 from process_emails.utils import convert_cookies_to_splash_format, get_messages_to_send_from_database, update_sms_processed_value
 from contxt.utils.helper_functions import save_screenshots_to_local, get_lua_script_absolute_path
+from contxt.utils.constants import CURRENT_TASKS_RUN_BY_BOTS
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
@@ -12,7 +13,7 @@ import sys
 
 STATIC_COOKIES = settings.STATIC_COOKIES
 
-logger = logging.getLogger('push_email')
+
 
 class Command(BaseCommand):
     """
@@ -38,6 +39,7 @@ class Command(BaseCommand):
             Main method to handle the push email process including retrieving messages and sending replies.
     """
     help = 'Run the push email process to send replies.'
+    command_name = CURRENT_TASKS_RUN_BY_BOTS['push_emails']
 
     def add_arguments(self, parser):
         parser.add_argument('--message_id', type=str, help='The ID of the message (optional).')
@@ -62,15 +64,20 @@ class Command(BaseCommand):
         message_content = kwargs.get('message_content')
         bot_id = kwargs.get('bot_id')
 
+        if bot_id:
+            logger = logging.getLogger(f'bot_{bot_id}_{self.command_name}')
+        else:
+            logger = logging.getLogger('push_email')
+
         logger.info(f'Push Email got bot id = {bot_id} ')
 
         session = SessionManager.get_session(bot_id=bot_id)
         if not session:
             logger.error(f"Failed to retrieve session for bot = {bot_id}.")
             return
-        self.run_push_email(session=session, message_id=message_id, message_content=message_content, bot_id=bot_id)
+        self.run_push_email(session=session, message_id=message_id, message_content=message_content, bot_id=bot_id, logger=logger)
 
-    def capture_session_state(self, session):
+    def capture_session_state(self, session, logger):
         """
         Captures and logs the current state of the session.
 
@@ -90,7 +97,7 @@ class Command(BaseCommand):
         logger.info(json.dumps(state, indent=2))
         return state
 
-    def log_response_info(self, response, is_splash_response=False, retry_number=0):
+    def log_response_info(self, response, is_splash_response=False, retry_number=0, logger=None):
         """
         Logs detailed information about the HTTP response.
 
@@ -125,7 +132,7 @@ class Command(BaseCommand):
                 f.write(response.text)
         logger.info(f"=====================")
 
-    def send_email_reply(self, session, message_content, message_id, session_state):
+    def send_email_reply(self, session, message_content, message_id, session_state, logger):
         """
         Sends an email reply using the Splash service.
 
@@ -182,7 +189,7 @@ class Command(BaseCommand):
                 please make sure they have word screenshot in their key value.
                 """
                 save_screenshots_to_local(result=result, logger_name=logger.name)
-                self.log_response_info(response=response, is_splash_response=True, retry_number=retry_number + 1)
+                self.log_response_info(response=response, is_splash_response=True, retry_number=retry_number + 1, logger=logger)
 
             if response.status_code == 200 and result['element_found'] and result['text_box_message'] != 'Text box not found':
                 request_success = True
@@ -197,7 +204,7 @@ class Command(BaseCommand):
         logger.error('----------------------------------')
         return False
 
-    def run_push_email(self, session=None, message_id=None, message_content=None, bot_id=None):
+    def run_push_email(self, session=None, message_id=None, message_content=None, bot_id=None, logger=None):
         """
         Runs the push email process, retrieving messages from the database and sending replies.
 
@@ -227,12 +234,12 @@ class Command(BaseCommand):
             logger.info('No SMS messages found to process at the moment.')
             return "No SMS messages found to process at the moment."
 
-        session_state = self.capture_session_state(session)
+        session_state = self.capture_session_state(session, logger=logger)
 
         for sms_data in message_id_content:
             sms_id, message_id, message_content = sms_data
             if message_id and message_content:
-                success = self.send_email_reply(session=session, message_content=message_content, message_id=message_id, session_state=session_state)
+                success = self.send_email_reply(session=session, message_content=message_content, message_id=message_id, session_state=session_state, logger=logger)
             else:
                 continue
 

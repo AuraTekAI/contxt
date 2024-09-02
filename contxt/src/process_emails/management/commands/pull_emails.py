@@ -90,7 +90,7 @@ class Command(BaseCommand):
             logger.info(f"Found {len(email_rows)} email rows")
 
             if not email_rows:
-                logger.error(f"No email rows found for bot = {bot_id}.")
+                logger.info(f"No email rows found for bot = {bot_id}. Check the logs above for more information.")
                 return
 
             emails_to_save = []
