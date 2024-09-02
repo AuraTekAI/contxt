@@ -30,3 +30,14 @@ SMS_TABLE_SEED_DATA = {
 PROCESSED DATA CONSTANTS
 """
 PROCESSED_DATA_STATUS_CHOICES = [('processed', 'Processed'), ('pending', 'Pending')]
+
+"""
+CURRENT TASKS RUN BY BOTS
+"""
+# Keep adding the names of modules here to dynamically add logger configurations.
+CURRENT_TASKS_RUN_BY_BOTS = {
+    'send_sms' : 'send_sms',
+    'push_emails' : 'push_emails',
+    'pull_emails' : 'pull_emails',
+    'accept_invites' : 'accept_invites'
+}

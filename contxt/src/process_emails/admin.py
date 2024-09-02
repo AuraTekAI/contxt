@@ -17,6 +17,7 @@ class EmailAdmin(admin.ModelAdmin):
         'subject',
         'sent_date_time',
         'is_processed',
+        'bot',
         'created_at',
         'updated_at',
     )

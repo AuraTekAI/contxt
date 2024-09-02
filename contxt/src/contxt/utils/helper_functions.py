@@ -1,8 +1,14 @@
 
+from contxt.utils.constants import CURRENT_TASKS_RUN_BY_BOTS
+
+from django.conf import settings
+
 import logging
 import base64
 import os
 import json
+
+logger = logging.getLogger('django')
 
 def extract_screenshots(data):
     """
@@ -80,3 +86,64 @@ def get_lua_script_absolute_path(relative_path):
     file_path = os.path.join(current_dir, relative_path)
 
     return file_path
+
+def update_logging_config():
+    """
+    Update the logging configuration based on bot data from a JSON file.
+
+    This function performs the following steps:
+    1. Loads the base logging configuration from the Django settings.
+    2. Reads bot configuration data from a JSON file.
+    3. Iterates over each bot and their associated tasks.
+    4. For each bot and task, creates and adds a file handler and logger to the logging configuration.
+    5. Applies the updated logging configuration using `logging.config.dictConfig`.
+    """
+
+    # Load the base logging configuration from Django settings
+    logging_config = settings.LOGGING.copy()
+
+    # Construct the path to the JSON file containing bot configurations
+    config_file_path = os.path.join(os.path.dirname(settings.BASE_DIR), 'bot-accounts.json')
+    print(f'Config file path = {config_file_path}')
+
+    # Open and read the JSON file containing bot configurations
+    with open(config_file_path, 'r') as file:
+        bot_configs = json.load(file)
+        bots = bot_configs['bots']
+
+    # Iterate over each bot in the bot configurations
+    for bot in bots:
+        # Convert the bot name to lowercase for consistency
+        bot_name = bot['name'].lower()
+
+        # Iterate over each task defined in CURRENT_TASKS_RUN_BY_BOTS
+        for task_key, task_value in CURRENT_TASKS_RUN_BY_BOTS.items():
+            # Define the filename for the log file based on bot name and task
+            log_filename = os.path.join(settings.LOG_DIR, f'{bot_name}_{task_value}.log')
+
+            # Define a file handler for the specific bot and task
+            file_handler = {
+                'level': 'DEBUG',
+                'class': 'logging.FileHandler',
+                'filename': log_filename,
+                'formatter': 'verbose',
+            }
+
+            # Generate a unique name for the file handler and add it to the configuration
+            handler_name = f'{bot_name}_{task_value}_file'
+            logging_config['handlers'][handler_name] = file_handler
+
+            # Define a logger for the specific bot and task
+            bot_logger_name = f'{bot_name}_{task_value}'
+            bot_logger = {
+                'handlers': ['console', handler_name],
+                'level': 'DEBUG',
+                'propagate': False,
+            }
+
+            # Add the logger to the logging configuration
+            logging_config['loggers'][bot_logger_name] = bot_logger
+
+    # Apply the updated logging configuration using the `dictConfig` method
+    logging.config.dictConfig(logging_config)
+

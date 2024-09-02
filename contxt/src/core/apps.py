@@ -1,3 +1,4 @@
+from contxt.utils.helper_functions import update_logging_config
 
 from django.apps import AppConfig
 from django.conf import settings
@@ -17,6 +18,7 @@ class CoreConfig(AppConfig):
         This method is called when the Django application is ready.
         It sets up the periodic tasks for bot accounts if Celery is enabled in the settings.
         """
+        update_logging_config()
         if settings.CELERY_ENABLED:  # Check if Celery is enabled in the settings
             # The following code sets up periodic tasks after migrations are applied
 
@@ -47,9 +49,22 @@ class CoreConfig(AppConfig):
                     Each task will run every 10 minutes and will trigger the
                     'core.tasks.entrypoint_for_bots' task with the bot's ID as an argument.
                     """
-                    PeriodicTask.objects.create(
-                        interval=schedule,
-                        name=f'BOT_{bot.id}_TASKS',  # Name the task uniquely using the bot's ID
-                        task='core.tasks.entrypoint_for_bots',  # Specify the task to run
-                        args=json.dumps([bot.id])  # Pass the bot's ID as a JSON-encoded argument
+                    PeriodicTask.objects.update_or_create(
+                        name=f'BOT_{bot.id}_TASKS',  # Name the task uniquely using the bot's ID as the lookup field
+                        defaults={
+                            'interval': schedule,  # Specify the interval or schedule for the task
+                            'task': 'core.tasks.entrypoint_for_bots',  # Specify the task to run
+                            'args': json.dumps([bot.id])  # Pass the bot's ID as a JSON-encoded argument
+                        }
                     )
+                """
+                This is used because we may set a bot as inactive from django admin or database but it's celery tasks will still continue to execute.
+                Below task will prevent that and set the bot as task status the same as the status of the bot.
+                """
+                PeriodicTask.objects.update_or_create(
+                    name='TASK_SYNC_BOT_TASKS_WITH_BOT',  # Use the task name as the lookup field
+                    defaults={
+                        'interval': schedule,  # Specify the interval or schedule for the task
+                        'task': 'core.tasks.sync_bot_tasks_with_bots',  # Specify the task to run
+                    }
+                )

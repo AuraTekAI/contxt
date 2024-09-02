@@ -99,6 +99,9 @@ You will only need to run the above command if you are running the project for t
 - You should be able to access the web interface at `localhost:8000/admin`.
 - To create a user for testing the web interface, run the below command and follow the prompts:
     - `docker exec -it web python src/manage.py createsuperuser`
+- To setup initial configuration for the bots run:
+    - `docker exec -it web python src/manage.py create_update_bot_accounts`
+    - if the above command was run for the first time please make sure to run `docker exec -it web python src/manage.py migrate`. This will setup the celery tasks for the bots and their own loggers.
 - To run the different modules individually, these commands should be run:
     - `docker exec -it web python src/manage.py pull_emails`
     - `docker exec -it web python src/manage.py push_emails`

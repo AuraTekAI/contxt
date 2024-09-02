@@ -42,3 +42,6 @@ def entrypoint_for_bots(self, bot_id):
     call_command('send_sms', bot_id=bot_id)
 
 
+@shared_task(base=CustomExceptionHandler, bind=True, queue='scheduling_queue')
+def sync_bot_tasks_with_bots(self):
+    call_command('sync_bots_with_bot_tasks')

@@ -2,11 +2,13 @@
 from accounts.models import BotAccount
 
 from django.core.management.base import BaseCommand
+from django.conf import settings
 
-from django_celery_beat.models import PeriodicTask
+from django_celery_beat.models import PeriodicTask, IntervalSchedule
+
+import json
 
 class Command(BaseCommand):
-    # A brief description of what this command does
     help = 'Sync bot accounts to their celery beat tasks from database tables'
 
     def handle(self, *args, **kwargs):
@@ -17,7 +19,8 @@ class Command(BaseCommand):
         2. Iterates over each bot account to find the corresponding periodic task.
         3. If a periodic task is found, it updates the task's 'enabled' status
            based on the bot's 'is_active' status.
-        4. Saves the changes to the database and outputs the result.
+        4. If no periodic task is found for an active bot, it creates a new periodic task.
+        5. Saves the changes to the database and outputs the result.
         """
 
         # Step 1: Retrieve all bot accounts from the database
@@ -25,27 +28,35 @@ class Command(BaseCommand):
 
         # Step 2: Iterate over each bot account
         for bot in bot_accounts:
-            """
-            Step 3: For each bot account, filter the PeriodicTask model to find the first
-            periodic task where the bot's ID is included in the 'args' field.
-            This assumes 'args' is stored as a JSON-encoded list and the bot's ID
-            is part of that list.
-            """
             periodic_task_for_bot = PeriodicTask.objects.filter(args__contains=[bot.id]).first()
 
-            # Step 4: Check if a corresponding periodic task was found
+            # Step 3: Check if a corresponding periodic task was found
             if periodic_task_for_bot:
-                """
-                If a periodic task is found, update its 'enabled' field to match
-                the bot's 'is_active' status. This will ensure that the periodic task
-                is only enabled when the bot is active.
-                """
-                periodic_task_for_bot.enabled = bot.is_active
-
-                # Save the updated task back to the database
-                periodic_task_for_bot.save()
-
-                # Output the success message to the console
+                # Update the 'enabled' status based on the bot's 'is_active' status
+                if periodic_task_for_bot.enabled != bot.is_active:
+                    periodic_task_for_bot.enabled = bot.is_active
+                    periodic_task_for_bot.save()
                 self.stdout.write(
                     self.style.SUCCESS(f'Bot_{bot.id} periodic task value set to {periodic_task_for_bot.enabled}.')
+                )
+            elif bot.is_active:
+                # Step 4: Create a new periodic task if the bot is active and no task exists
+                schedule, _ = IntervalSchedule.objects.get_or_create(
+                    every=settings.BOT_TASK_INTERVAL_VALUE,  # Set the interval for the task, e.g., every 10 minutes
+                    period=IntervalSchedule.MINUTES
+                )
+
+                PeriodicTask.objects.create(
+                    interval=schedule,
+                    name=f'BOT_{bot.id}_TASKS',
+                    task='core.tasks.entrypoint_for_bots',
+                    args=json.dumps([bot.id]),
+                    enabled=True
+                )
+                self.stdout.write(
+                    self.style.SUCCESS(f'Created a new periodic task for Bot_{bot.id} and enabled it.')
+                )
+            else:
+                self.stdout.write(
+                    self.style.WARNING(f'Bot_{bot.id} is inactive and no periodic task was created.')
                 )
