@@ -2,6 +2,7 @@
 from accounts.login_service import SessionManager
 from accounts.utils import get_or_create_user
 from process_emails.utils import save_emails
+from contxt.utils.constants import CURRENT_TASKS_RUN_BY_BOTS
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
@@ -13,14 +14,12 @@ import re
 import logging
 
 
-logger = logging.getLogger('pull_email')
-
-
 HEADERS = settings.PULL_EMAIL_REQUEST_HEADERS
 HEADERS['Referer'] = settings.INBOX_URL
 
 class Command(BaseCommand):
     help = 'Process unread emails from the Corrlinks inbox'
+    command_name = CURRENT_TASKS_RUN_BY_BOTS['pull_emails']
 
     def add_arguments(self, parser):
         parser.add_argument('--bot_id', type=int, help='The bot id for the bot executing tasks.')
@@ -52,6 +51,12 @@ class Command(BaseCommand):
         """
 
         bot_id = options.get('bot_id')
+
+        logger = None
+        if bot_id:
+            logger = logging.getLogger(f'bot_{bot_id}_{self.command_name}')
+        else:
+            logger = logging.getLogger('pull_email')
         logger.info(f'Pull Email got bot id = {bot_id} ')
 
         # Retrieve session from another command
@@ -136,7 +141,7 @@ class Command(BaseCommand):
                     if email_response.status_code == 200:
                         email_content = self.parse_ajax_response(email_response.text)
                         if email_content:
-                            email_data = self.process_email_content(email_content, message_id)
+                            email_data = self.process_email_content(email_content, message_id, logger=logger)
                             if email_data:
                                 user_id = get_or_create_user(email_data)
                                 if user_id:
@@ -189,7 +194,7 @@ class Command(BaseCommand):
             return match.group(1)
         return None
 
-    def process_email_content(self, content, message_id):
+    def process_email_content(self, content, message_id, logger):
         """
         Processes the content of a single email.
         Parameters:
@@ -223,7 +228,7 @@ class Command(BaseCommand):
             'message': most_recent_message
         }
 
-        logging.debug(f"Processed email content: {result}")
+        logger.debug(f"Processed email content: {result}")
         return result
 
     def extract_most_recent_message(self, full_message):
