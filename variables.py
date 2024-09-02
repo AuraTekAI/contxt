@@ -24,7 +24,6 @@ USERNAME = "bradleyaroth@gmail.com"
 PASSWORD = "Thought20"
 # USERNAME = "info@contxts.net"
 # PASSWORD = "ConTXTsR0ck$"
-MASTERCLPWD = ConsensusMessengerGays1
 LOGIN_BUTTON_TEXT = 'Login >>'
 
 # Proxy settings
@@ -83,11 +82,13 @@ TEST_KEY = '3383a22f7ee0a5da47b11a90ce451b62df3cf185XVOK7QpjQSjJ2eNkHPSaQ9Jur_te
 TEST_MESSAGE_BODY = 'Sending Test Message From ConTXT'
 TEST_USER_ID = '15372010'
 
-# BOT Email Account Credentials
+# Only for Communication to Clients
 EMAILURL0 = "mail.contxts.net"
-EMIALURL1 = "smtp.gmail.com"
 EMAIL0_USERNAME = "bradley@contxts.net"
 EMAIL0_PASSWORD = "Gr3@tSc0tch"
+# BOT Email Account Credentials
+MASTERCLPWD = ConsensusMessengerGays1 #<------ Gmail and CL Password
+EMIALURL1 = "smtp.gmail.com"
 EMAIL1_USERNAME = "forestpineneedle@gmail.com"
 EMAIL1_PASSWORD = "ndfu ybud kxib tnzk"
 EMAIL2_USERNAME = "citylightpine@gmail.com"
