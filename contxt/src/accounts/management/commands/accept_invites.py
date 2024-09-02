@@ -16,7 +16,6 @@ from django.conf import settings
 import logging
 import json
 
-logger = logging.getLogger('accpet_invite')
 
 class Command(BaseCommand):
     help = 'Process invitation codes from emails and accept them in Corrlinks.'
@@ -28,15 +27,18 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         bot_id = options.get('bot_id')
 
+        logger = None
         if bot_id:
             logger = logging.getLogger(f'bot_{bot_id}_{self.command_name}')
+        else:
+            logger = logging.getLogger('accpet_invite')
 
         logger.info(f'Accept invite got bot id = {bot_id} ')
 
-        result = process_invitation(bot_id=bot_id)
+        result = process_invitation(bot_id=bot_id, logger=logger)
         logger.info(f"Invitation processing result for bot {bot_id}: {result}")
 
-def log_request_info(url, method, headers, data=None, params=None, cookies=None):
+def log_request_info(url, method, headers, data=None, params=None, cookies=None, logger=None):
     """
     Logs detailed information about an HTTP request.
     Parameters:
@@ -65,7 +67,7 @@ def log_request_info(url, method, headers, data=None, params=None, cookies=None)
         logger.info(json.dumps(dict(cookies), indent=2))
     logger.info("====================")
 
-def log_response_info(response, is_splash_request=False):
+def log_response_info(response, is_splash_request=False, logger=None):
     """
     Logs detailed information about an HTTP response.
 
@@ -125,7 +127,7 @@ def log_response_info(response, is_splash_request=False):
 
     logger.info("=====================")
 
-def fetch_invite_code_and_name(bot_id=None):
+def fetch_invite_code_and_name(bot_id=None, logger=None):
     """
     Fetches invitation codes and full names from recent emails.
 
@@ -208,7 +210,7 @@ def fetch_invite_code_and_name(bot_id=None):
         return None
 
 
-def navigate_enter_code_accept_invite(session, invitation_code=None, email_id=None, lua_script=None):
+def navigate_enter_code_accept_invite(session, invitation_code=None, email_id=None, lua_script=None, logger=None):
     """
     Navigates to the Pending Contact page on the Corrlinks website, enters an invitation code,
     and attempts to accept the invite.
@@ -302,7 +304,7 @@ def navigate_enter_code_accept_invite(session, invitation_code=None, email_id=No
         if not page_html == None:
             # Log detailed response information for analysis.
             # This includes status codes, HTML content, and any other relevant details.
-            log_response_info(response, is_splash_request=True)
+            log_response_info(response, is_splash_request=True, logger=logger)
 
 
         # Check if the invitation code was successfully processed.
@@ -340,7 +342,7 @@ def navigate_enter_code_accept_invite(session, invitation_code=None, email_id=No
     logger.error(f'Something went wrong in navigate_enter_code_accept_invite function. Check the logs above for more details.\n')
     return None
 
-def process_invitation(bot_id=None):
+def process_invitation(bot_id=None, logger=None):
     """
     Manages the complete process of fetching invitation codes from emails, logging into Corrlinks,
     and submitting the codes to accept pending invitations.
@@ -375,7 +377,7 @@ def process_invitation(bot_id=None):
        - Each key in the dictionary represents an invitation code, and the value indicates whether it was successfully processed or not.
     """
     logger.info(f"Starting the invitation processing for bot = {bot_id}")
-    invite_codes_dict = fetch_invite_code_and_name(bot_id=bot_id)
+    invite_codes_dict = fetch_invite_code_and_name(bot_id=bot_id, logger=logger)
     if not invite_codes_dict or invite_codes_dict == {}:
         logger.info("No new invites found in mail. Check logs above this for more details.")
         return False
@@ -396,7 +398,7 @@ def process_invitation(bot_id=None):
         email_id = value[1]
         invite_code = invite_code
         logger.info(f"Starting navigating enter code for bot = {bot_id}")
-        response_value = navigate_enter_code_accept_invite(session=session, invitation_code=invite_code, email_id=email_id, lua_script=lua_script)
+        response_value = navigate_enter_code_accept_invite(session=session, invitation_code=invite_code, email_id=email_id, lua_script=lua_script, logger=logger)
 
         if not response_value == None:
             message = f'Invite code {invite_code} processed successfully.'
