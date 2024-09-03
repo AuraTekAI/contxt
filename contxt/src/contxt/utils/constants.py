@@ -22,8 +22,7 @@ TRANSACTION_STATUS_CHOICES = [('Pending', 'Pending'), ('Completed', 'Completed')
 SMS TABLE SEED DATA
 """
 SMS_TABLE_SEED_DATA = {
-    '3736625367' : [],
-    '3736550349' : [],
+    '3736625367' : [] # TODO: Add some random message id from every bot below
 }
 
 """

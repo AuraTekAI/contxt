@@ -1,7 +1,7 @@
 from contxt.utils.constants import SMS_TABLE_SEED_DATA
 from sms_app.models import SMS
 from process_emails.models import Email
-from accounts.models import User
+from accounts.models import User, BotAccount
 from core.models import Contact
 
 from django.core.management.base import BaseCommand
@@ -68,25 +68,16 @@ class Command(BaseCommand):
 
             # Seed the database with example email and SMS data.
             for message_id in SMS_TABLE_SEED_DATA.keys():
-                email = Email.objects.create(
-                    user=user,
-                    message_id=message_id,
-                    sent_date_time=timezone.now(),
-                    subject=f'Subject {message_id}',
-                    body=f'Send message to {contact.phone_number}',
-                    is_processed=False
-                )
-
-                SMS.objects.create(
-                    contact=contact,
-                    email=email,
-                    message=f'This is a test message for {message_id} sent from {settings.ENVIRONMENT}',
-                    text_id=f'text-{message_id}',
-                    phone_number=f'+373{message_id[-7:]}',
-                    direction='Inbound',
-                    status='Sent',
-                    is_processed=False
-                )
+                for bot in BotAccount.objects.all():
+                    email = Email.objects.create(
+                        user=user,
+                        bot=bot,
+                        message_id=message_id,
+                        sent_date_time=timezone.now(),
+                        subject=f'Send message to {contact.phone_number}',
+                        body=f'Send message to {contact.phone_number}',
+                        is_processed=False
+                    )
 
             self.stdout.write(self.style.SUCCESS('Successfully seeded DB with data.'))
         else:

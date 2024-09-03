@@ -12,15 +12,15 @@ import re
 from drf_yasg import openapi
 
 
-def get_to_number_from_message_body(message_body=None):
-    if not message_body:
+def get_to_number_from_message_subject(subject=None):
+    if not subject:
         return None
 
     # Define a pattern that includes an optional '+' at the start, followed by 10 to 15 digits
     phone_pattern = re.compile(r'\+?\d{10,15}\b')
 
     # Search for a match in the message body
-    match = phone_pattern.search(message_body)
+    match = phone_pattern.search(subject)
 
     if not match:
         return None
@@ -37,10 +37,11 @@ def get_to_number_from_message_body(message_body=None):
 
     return to_number
 
-def log_sms_to_database(contact_id, message_body, text_id, to_number, direction, status, is_processed, email):
+def log_sms_to_database(contact_id, message_body, text_id, to_number, direction, status, is_processed, email, bot=None):
     contact = Contact.objects.filter(id=contact_id).first()
     SMS.objects.create(
         contact = contact,
+        bot = bot,
         email = email,
         message = message_body,
         text_id = text_id,

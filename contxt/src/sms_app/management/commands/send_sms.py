@@ -2,8 +2,8 @@
 from process_emails.models import Email
 from core.models import Contact
 from sms_app.models import SMS
-from accounts.models import User
-from sms_app.utils import get_to_number_from_message_body, log_sms_to_database, generate_webhook_token
+from accounts.models import User, BotAccount
+from sms_app.utils import get_to_number_from_message_subject, log_sms_to_database, generate_webhook_token
 from sms_app.tasks import send_quota_limit_reached_email_task
 from contxt.utils.constants import SMS_DIRECTION_CHOICES, SMS_STATUS_CHOICES, CURRENT_TASKS_RUN_BY_BOTS
 
@@ -47,13 +47,13 @@ class Command(BaseCommand):
             else:
                 logger.info(f"SMS sending process Started for bot = {bot_id}")
 
-                self.send_sms(logger=logger, sms_quota_logger=sms_quota_logger)
+                self.send_sms(logger=logger, sms_quota_logger=sms_quota_logger, bot_id=bot_id)
 
                 logger.info("SMS processing completed")
         else:
             sms_quota_logger.error('Error occured while getting quota value from textbelt. Skipping execution of send sms.')
 
-    def send_sms(self, user_id=None, contact_id=None, to_number=None, message_body=None, message_id=None, logger=None, sms_quota_logger=None):
+    def send_sms(self, user_id=None, contact_id=None, to_number=None, message_body=None, message_id=None, logger=None, sms_quota_logger=None, bot_id=None):
         if user_id and contact_id:
             logger.debug(f"Starting SMS send process for user_id: {user_id}, contact_id: {contact_id}")
 
@@ -92,7 +92,7 @@ class Command(BaseCommand):
                     try:
                         log_sms_to_database(contact_id=contact_id, message_body=message_body, text_id=text_id, to_number=to_number, \
                             direction=SMS_DIRECTION_CHOICES_DICT['Outbound'], status=SMS_STATUS_CHOICES_DICT['Sent'], is_processed=True, email=email)
-                        self.check_sms_status(text_id, user_id, message_id, message_body, to_number, contact_id, email=email, logger=logger, sms_quota_logger=sms_quota_logger)
+                        self.check_sms_status(text_id, user_id, message_id, message_body, to_number, contact_id, email=email, logger=logger, sms_quota_logger=sms_quota_logger, bot=None)
                     except Exception as e:
                         logger.error(f'Error occured while logging sms to DB. {e}')
 
@@ -111,13 +111,19 @@ class Command(BaseCommand):
                 logger.error(f"Request failed: {str(e)}")
         else:
             key = settings.API_KEY
-            unprocessed_emails = Email.objects.filter(is_processed=False).all()
+
+            bot_obj = None
+            if bot_id:
+                bot_obj = BotAccount.objects.filter(id=bot_id).first()
+
+            unprocessed_emails = Email.objects.filter(is_processed=False, bot=bot_obj).all()
 
             for email in unprocessed_emails:
                 user_id = email.user_id
                 message_body = email.body
+                subject = email.subject
 
-                to_number = get_to_number_from_message_body(message_body)
+                to_number = get_to_number_from_message_subject(subject)
 
                 contact = Contact.objects.filter(user_id=user_id, phone_number=to_number).first()
                 if contact:
@@ -147,8 +153,8 @@ class Command(BaseCommand):
 
                             try:
                                 log_sms_to_database(contact_id=contact_id, message_body=message_body, text_id=text_id, to_number=to_number, \
-                                    direction=SMS_DIRECTION_CHOICES_DICT['Outbound'], status=SMS_STATUS_CHOICES_DICT['Sent'], is_processed=True, email=email)
-                                self.check_sms_status(text_id, user_id, message_id, message_body, to_number, contact_id, email=email, logger=logger, sms_quota_logger=sms_quota_logger)
+                                    direction=SMS_DIRECTION_CHOICES_DICT['Outbound'], status=SMS_STATUS_CHOICES_DICT['Sent'], is_processed=True, email=email, bot=bot_obj)
+                                self.check_sms_status(text_id, user_id, message_id, message_body, to_number, contact_id, email=email, logger=logger, sms_quota_logger=sms_quota_logger, bot=bot_obj)
                             except Exception as e:
                                 logger.error(f'Error occured while logging sms to DB. {e}')
                         else:
@@ -156,7 +162,7 @@ class Command(BaseCommand):
                             logger.error(f"Failed to send message. Error: {error}")
                             try:
                                 log_sms_to_database(contact_id=contact_id, message_body=message_body, text_id=None, to_number=to_number, \
-                                    direction=SMS_DIRECTION_CHOICES_DICT['Outbound'], status=SMS_STATUS_CHOICES_DICT['Failed'], is_processed=True, email=email)
+                                    direction=SMS_DIRECTION_CHOICES_DICT['Outbound'], status=SMS_STATUS_CHOICES_DICT['Failed'], is_processed=True, email=email, bot=bot_obj)
 
                                 email.is_processed = True
                                 email.save()
@@ -167,17 +173,27 @@ class Command(BaseCommand):
                 else:
                     logger.error(f'No contact found in database for number {to_number}.')
 
-    def check_sms_status(self, text_id, user_id, message_id, message_body, to_number, contact_id, retry_count=0, email=None, logger=None, sms_quota_logger=None):
+    def check_sms_status(self, text_id, user_id, message_id, message_body, to_number, contact_id, retry_count=0, email=None, logger=None, sms_quota_logger=None, bot=None):
         try:
-            time.sleep(settings.SMS_RETRY_DELAY)
-            response = requests.get(settings.SMS_STATUS_URL.format(text_id))
-            response.raise_for_status()
-            result = response.json()
+            '''
+            This currently has to be executed with delay because on textbelt side, the status of SMS is updated with delay.
+            For example a SMS maybe delievered successfuly but their api still return SENT instead of DELIVERED.
+            '''
+            response = None
+            for retry in range(settings.MAX_SMS_RETRIES):
+                time.sleep(settings.SMS_RETRY_DELAY)
+                response = requests.get(settings.SMS_STATUS_URL.format(text_id))
+                response.raise_for_status()
+
+                result = response.json()
+                if result.get('status') == "DELIVERED":
+                    break
+
             status = result.get('status')
 
             logger.debug(f"SMS {text_id} status check: {status}")
 
-            sms_obj = SMS.objects.filter(text_id=text_id).first()
+            sms_obj = SMS.objects.filter(text_id=text_id, direction=SMS_DIRECTION_CHOICES_DICT['Outbound']).first()
             if not sms_obj:
                 logger.error(f"SMS object with text_id {text_id} not found in database.")
                 return
@@ -201,10 +217,10 @@ class Command(BaseCommand):
                     time.sleep(settings.SMS_RETRY_DELAY)
 
                     # Attempt to resend the SMS
-                    new_text_id = self.resend_sms(user_id, contact_id, to_number, message_body, retry_count,email=email, logger=logger)
+                    new_text_id = self.resend_sms(user_id, contact_id, to_number, message_body, retry_count,email=email, logger=logger, sms_quota_logger=sms_quota_logger, bot=bot)
 
                     if new_text_id:
-                        self.check_sms_status(new_text_id, user_id, message_id, message_body, to_number, contact_id, retry_count + 1, email=email, logger=logger, sms_quota_logger=sms_quota_logger)
+                        self.check_sms_status(new_text_id, user_id, message_id, message_body, to_number, contact_id, retry_count + 1, email=email, logger=logger, sms_quota_logger=sms_quota_logger, bot=bot)
                 else:
                     sms_obj.status = SMS_STATUS_CHOICES_DICT['Failed']
                     sms_obj.save()
@@ -226,10 +242,10 @@ class Command(BaseCommand):
                 time.sleep(settings.SMS_RETRY_DELAY)
 
                 # Attempt to resend the SMS
-                new_text_id = self.resend_sms(user_id, contact_id, to_number, message_body, retry_count,email=email, logger=logger)
+                new_text_id = self.resend_sms(user_id, contact_id, to_number, message_body, retry_count,email=email, logger=logger, sms_quota_logger=sms_quota_logger, bot=bot)
 
                 if new_text_id:
-                    self.check_sms_status(new_text_id, user_id, message_id, message_body, to_number, contact_id, retry_count + 1, email=email)
+                    self.check_sms_status(new_text_id, user_id, message_id, message_body, to_number, contact_id, retry_count + 1, email=email, bot=bot, logger=logger, sms_quota_logger=sms_quota_logger)
             else:
                 sms_obj.status = SMS_STATUS_CHOICES_DICT['Failed']
                 sms_obj.save()
@@ -243,7 +259,7 @@ class Command(BaseCommand):
         except Exception as e:
             logger.error(f"An error occurred while checking status of the sent SMS {text_id}. Error = {e}")
 
-    def resend_sms(self, user_id, contact_id, to_number, message_body, retry_count, email, logger, sms_quota_logger):
+    def resend_sms(self, user_id, contact_id, to_number, message_body, retry_count, email, logger, sms_quota_logger, bot=None):
         logger.info(f"Resending SMS. Retry Count: {retry_count}")
 
         payload = {
@@ -266,7 +282,7 @@ class Command(BaseCommand):
                 sms_quota_logger.debug(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - Quota remaining: {quota_remaining}\n")
 
                 log_sms_to_database(contact_id=contact_id, message_body=message_body, text_id=new_text_id, to_number=to_number,
-                    direction=SMS_DIRECTION_CHOICES_DICT['Outbound'], status=SMS_STATUS_CHOICES_DICT['Sent'], is_processed=True, email=email)
+                    direction=SMS_DIRECTION_CHOICES_DICT['Outbound'], status=SMS_STATUS_CHOICES_DICT['Sent'], is_processed=True, email=email, bot=bot)
 
                 return new_text_id
 
