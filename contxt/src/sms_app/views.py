@@ -81,6 +81,7 @@ def textbelt_webhook(request):
             contact = outbound_sms_obj.contact
             if email and contact:
                 inbound_sms_obj = SMS.objects.create(
+                    bot = outbound_sms_obj.bot,
                     email = email,
                     contact = contact,
                     message = incoming_data.get('text', None),

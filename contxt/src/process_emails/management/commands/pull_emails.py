@@ -15,7 +15,7 @@ import logging
 
 
 HEADERS = settings.PULL_EMAIL_REQUEST_HEADERS
-HEADERS['Referer'] = settings.INBOX_URL
+HEADERS['Referer'] = settings.UNREAD_MESSAGES_URL
 
 class Command(BaseCommand):
     help = 'Process unread emails from the Corrlinks inbox'
@@ -67,9 +67,9 @@ class Command(BaseCommand):
             logger.error(f"Failed to retrieve session for bot = {bot_id}.")
             return
 
-        logger.info(f"Attempting to fetch inbox page for bot = {bot_id}: {settings.INBOX_URL}")
+        logger.info(f"Attempting to fetch inbox page for bot = {bot_id}: {settings.UNREAD_MESSAGES_URL}")
         try:
-            response = session.get(settings.INBOX_URL)
+            response = session.get(settings.UNREAD_MESSAGES_URL)
             logger.info(f"Inbox page response status code for bot = {bot_id}: {response.status_code}")
 
             if response.status_code != 200:
@@ -135,7 +135,7 @@ class Command(BaseCommand):
                     headers['Content-Type'] = form.content_type
 
                     logger.info(f"Sending POST request for email {message_id} for bot = {bot_id}")
-                    email_response = session.post(settings.INBOX_URL, data=form.to_string(), headers=headers)
+                    email_response = session.post(settings.UNREAD_MESSAGES_URL, data=form.to_string(), headers=headers)
                     logger.info(f"Email response status code: {email_response.status_code} for bot = {bot_id}")
 
                     if email_response.status_code == 200:
