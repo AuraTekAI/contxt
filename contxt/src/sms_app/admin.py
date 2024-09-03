@@ -5,6 +5,7 @@ class SMSAdmin(admin.ModelAdmin):
     # Fields to be displayed in the list view
     list_display = (
         'text_id',
+        'bot',
         'contact',
         'email',
         'phone_number',
@@ -21,6 +22,7 @@ class SMSAdmin(admin.ModelAdmin):
     # Fields to be used for filtering in the list view
     list_filter = (
         'direction',
+        'bot',
         'status',
         'is_processed',
         'created_at',
@@ -34,6 +36,7 @@ class SMSAdmin(admin.ModelAdmin):
     fields = (
         'text_id',
         'contact',
+        'bot',
         'email',
         'message',
         'phone_number',
@@ -54,7 +57,7 @@ class SMSAdmin(admin.ModelAdmin):
     def get_list_display(self, request):
         if request.user.is_superuser:
             return super().get_list_display(request)
-        return ('text_id', 'contact', 'email', 'phone_number', 'direction', 'status', 'is_processed', 'created_at')
+        return ('text_id', 'contact', 'bot', 'email', 'phone_number', 'direction', 'status', 'is_processed', 'created_at')
 
     def get_readonly_fields(self, request, obj=None):
         if obj:  # Editing an existing object

@@ -55,7 +55,10 @@ def log_incoming_request(request, logger):
     logger.debug(f'HTTP Method: {request.method}')
     logger.debug(f'Headers: {dict(request.headers)}')
     logger.debug(f'Query Params: {request.query_params}')
-    logger.debug(f'Body: {request.body.decode("utf-8")}')
+    try:
+        logger.debug(f'Body: {request.body.decode("utf-8")}')
+    except Exception as e:
+        logger.error(f'Error occurred while logging post request body = {e}')
     logger.debug(f'Request Data: {request.data}')
     logger.debug(f'----------------------------------------------')
 

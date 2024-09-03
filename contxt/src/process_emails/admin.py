@@ -28,6 +28,7 @@ class EmailAdmin(admin.ModelAdmin):
     # Fields to be used for filtering in the list view
     list_filter = (
         'is_processed',
+        'bot',
         'sent_date_time',
         'user',
     )
@@ -39,6 +40,7 @@ class EmailAdmin(admin.ModelAdmin):
     fields = (
         'user',
         'message_id',
+        'bot',
         'sent_date_time',
         'subject',
         'body',

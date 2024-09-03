@@ -39,5 +39,6 @@ CURRENT_TASKS_RUN_BY_BOTS = {
     'send_sms' : 'send_sms',
     'push_emails' : 'push_emails',
     'pull_emails' : 'pull_emails',
-    'accept_invites' : 'accept_invites'
+    'accept_invites' : 'accept_invites',
+    'receive_sms' : 'receive_sms'
 }
