@@ -58,6 +58,17 @@ class CoreConfig(AppConfig):
                         }
                     )
                 """
+                This is used to accept invite from info@contxts.net mail. This is seperated from the bot logic.
+                This is defined here to keep the definition for all periodic tasks in one place for simplicity.
+                """
+                PeriodicTask.objects.update_or_create(
+                    name='INFO_MAIL_ACCEPT_INVITE_TASK',  # Use the task name as the lookup field
+                    defaults={
+                        'interval': schedule,  # Specify the interval or schedule for the task
+                        'task': 'core.tasks.accept_info_mail_invites',  # Specify the task to run
+                    }
+                )
+                """
                 This is used because we may set a bot as inactive from django admin or database but it's celery tasks will still continue to execute.
                 Below task will prevent that and set the bot as task status the same as the status of the bot.
                 """

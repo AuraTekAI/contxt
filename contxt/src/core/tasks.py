@@ -76,3 +76,9 @@ def entrypoint_for_bots(self, bot_id):
 @shared_task(base=CustomExceptionHandler, bind=True, queue='scheduling_queue')
 def sync_bot_tasks_with_bots(self):
     call_command('sync_bots_with_bot_tasks')
+
+@shared_task(base=CustomExceptionHandler, bind=True, queue='scheduling_queue')
+def accept_info_mail_invites(self):
+    accept_invite_logger.debug(f'Starting invites processing for info@contxts.net ......')
+    call_command('accept_invites', is_accept_invite=True)
+

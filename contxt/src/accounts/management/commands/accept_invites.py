@@ -18,24 +18,63 @@ import json
 
 
 class Command(BaseCommand):
+    """
+    This command processes invitation codes from emails and accepts them in Corrlinks.
+
+    Attributes:
+    help (str): Description of the command's purpose.
+    command_name (str): The name of the command as defined in the CURRENT_TASKS_RUN_BY_BOTS dictionary.
+
+    Methods:
+    add_arguments(parser): Adds custom command-line arguments specific to this command.
+    handle(*args, **options): Main logic for processing invitations based on the provided arguments.
+    """
     help = 'Process invitation codes from emails and accept them in Corrlinks.'
     command_name = CURRENT_TASKS_RUN_BY_BOTS['accept_invites']
 
     def add_arguments(self, parser):
+        """
+        Adds custom arguments that can be passed to the command when it's called.
+
+        Arguments:
+        --bot_id (int): The ID of the bot that will process the invitations.
+        --is_accept_invite (bool): A flag to indicate whether the invitation should be accepted.
+        """
         parser.add_argument('--bot_id', type=int)
+        parser.add_argument('--is_accept_invite', type=bool)
 
     def handle(self, *args, **options):
+        """
+        The main function that gets called when this command is executed.
+
+        Arguments:
+        *args: Variable length argument list.
+        **options: Arbitrary keyword arguments that are parsed from the command line.
+
+        Key Operations:
+        1. Extracts 'bot_id' and 'is_accept_invite' from the options.
+        2. Sets up the logger to log actions under the bot-specific logger or a generic one.
+        3. Calls the process_invitation function with the appropriate arguments.
+        4. Logs the result of the invitation processing.
+        """
         bot_id = options.get('bot_id')
+        is_accept_invite = options.get('is_accept_invite')
+
 
         logger = None
         if bot_id:
             logger = logging.getLogger(f'bot_{bot_id}_{self.command_name}')
         else:
+            bot_id = None
             logger = logging.getLogger('accpet_invite')
 
         logger.info(f'Accept invite got bot id = {bot_id} ')
 
-        result = process_invitation(bot_id=bot_id, logger=logger)
+        if bot_id:
+            result = process_invitation(bot_id=bot_id, logger=logger, is_accept_invite=False)
+        elif is_accept_invite:
+            result = process_invitation(bot_id=bot_id, logger=logger, is_accept_invite=True)
+
         logger.info(f"Invitation processing result for bot {bot_id}: {result}")
 
 def log_request_info(url, method, headers, data=None, params=None, cookies=None, logger=None):
@@ -127,7 +166,7 @@ def log_response_info(response, is_splash_request=False, logger=None):
 
     logger.info("=====================")
 
-def fetch_invite_code_and_name(bot_id=None, logger=None):
+def fetch_invite_code_and_name(bot_id=None, logger=None, is_accept_invite=False):
     """
     Fetches invitation codes and full names from recent emails.
 
@@ -164,7 +203,7 @@ def fetch_invite_code_and_name(bot_id=None, logger=None):
 
     try:
         # Retrieve email credentials and URL
-        user_name, password, email_Url = get_email_password_url(bot_id=bot_id)
+        user_name, password, email_Url = get_email_password_url(bot_id=bot_id, is_accept_invite=is_accept_invite)
 
         if user_name is None and password is None and email_Url is None:
             return invite_code_full_name_data
@@ -298,13 +337,13 @@ def navigate_enter_code_accept_invite(session, invitation_code=None, email_id=No
             """
             save_screenshots_to_local(result=result, logger_name=logger.name)
 
-        # Retrieve the HTML content from the response if available.
-        # This HTML content can be useful for debugging or further processing.
-        page_html = result.get('html', None)
-        if not page_html == None:
-            # Log detailed response information for analysis.
-            # This includes status codes, HTML content, and any other relevant details.
-            log_response_info(response, is_splash_request=True, logger=logger)
+            # Retrieve the HTML content from the response if available.
+            # This HTML content can be useful for debugging or further processing.
+            page_html = result.get('html', None)
+            if not page_html == None:
+                # Log detailed response information for analysis.
+                # This includes status codes, HTML content, and any other relevant details.
+                log_response_info(response, is_splash_request=True, logger=logger)
 
 
         # Check if the invitation code was successfully processed.
@@ -342,7 +381,7 @@ def navigate_enter_code_accept_invite(session, invitation_code=None, email_id=No
     logger.error(f'Something went wrong in navigate_enter_code_accept_invite function. Check the logs above for more details.\n')
     return None
 
-def process_invitation(bot_id=None, logger=None):
+def process_invitation(bot_id=None, logger=None, is_accept_invite=False):
     """
     Manages the complete process of fetching invitation codes from emails, logging into Corrlinks,
     and submitting the codes to accept pending invitations.
@@ -376,15 +415,15 @@ def process_invitation(bot_id=None, logger=None):
        - Returns the `response_dict`, which contains the processing status for each invitation code.
        - Each key in the dictionary represents an invitation code, and the value indicates whether it was successfully processed or not.
     """
-    logger.info(f"Starting the invitation processing for bot = {bot_id}")
-    invite_codes_dict = fetch_invite_code_and_name(bot_id=bot_id, logger=logger)
+    logger.info(f"Starting the invitation processing for bot = {bot_id}. Accept invite = {is_accept_invite}")
+    invite_codes_dict = fetch_invite_code_and_name(bot_id=bot_id, logger=logger, is_accept_invite=is_accept_invite)
     if not invite_codes_dict or invite_codes_dict == {}:
         logger.info("No new invites found in mail. Check logs above this for more details.")
         return False
 
-    session = SessionManager.get_session(bot_id=bot_id)
+    session = SessionManager.get_session(bot_id=bot_id, is_accept_invite=is_accept_invite)
     if not session:
-        logger.error(f"Failed to login to Corrlinks for bot = {bot_id}")
+        logger.error(f"Failed to login to Corrlinks for bot = {bot_id}. Accept invite = {is_accept_invite}")
         return False
 
     logger.info(f"Session cookies after login: {dict(session.cookies)}")
@@ -397,7 +436,7 @@ def process_invitation(bot_id=None, logger=None):
     for invite_code, value in invite_codes_dict.items():
         email_id = value[1]
         invite_code = invite_code
-        logger.info(f"Starting navigating enter code for bot = {bot_id}")
+        logger.info(f"Starting navigating enter code for bot = {bot_id}. Accept invite = {is_accept_invite}")
         response_value = navigate_enter_code_accept_invite(session=session, invitation_code=invite_code, email_id=email_id, lua_script=lua_script, logger=logger)
 
         if not response_value == None:
