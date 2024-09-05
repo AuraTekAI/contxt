@@ -249,7 +249,7 @@ def fetch_invite_code_and_name(bot_id=None, logger=None, is_accept_invite=False)
         return None
 
 
-def navigate_enter_code_accept_invite(session, invitation_code=None, email_id=None, lua_script=None, logger=None):
+def navigate_enter_code_accept_invite(session, invitation_code=None, email_id=None, lua_script=None, logger=None, bot_id=None, is_accept_invite=None):
     """
     Navigates to the Pending Contact page on the Corrlinks website, enters an invitation code,
     and attempts to accept the invite.
@@ -350,7 +350,7 @@ def navigate_enter_code_accept_invite(session, invitation_code=None, email_id=No
         # The `is_processed` flag indicates whether the code was handled correctly.
         is_processed = result.get('is_processed', None)
         if is_processed:
-            user_name, password, email_Url = get_email_password_url()
+            user_name, password, email_Url = get_email_password_url(bot_id=bot_id, is_accept_invite=is_accept_invite)
             # If the invitation code was processed, connect to the email server.
             # Use the `MailBox` class to manage email operations.
             with MailBox(user_name, password, email_Url) as mailbox:
@@ -437,7 +437,7 @@ def process_invitation(bot_id=None, logger=None, is_accept_invite=False):
         email_id = value[1]
         invite_code = invite_code
         logger.info(f"Starting navigating enter code for bot = {bot_id}. Accept invite = {is_accept_invite}")
-        response_value = navigate_enter_code_accept_invite(session=session, invitation_code=invite_code, email_id=email_id, lua_script=lua_script, logger=logger)
+        response_value = navigate_enter_code_accept_invite(session=session, invitation_code=invite_code, email_id=email_id, lua_script=lua_script, logger=logger, bot_id=bot_id, is_accept_invite=is_accept_invite)
 
         if not response_value == None:
             message = f'Invite code {invite_code} processed successfully.'
