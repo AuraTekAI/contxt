@@ -68,6 +68,7 @@ services:
       - log_files:/app/logs
       - ./src/.env:/app/src/.env
       - ./bot-accounts.json:/app/bot-accounts.json
+      - .:/app
     env_file:
       - ./src/.env
     working_dir: /app/src
