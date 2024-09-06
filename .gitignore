@@ -30,8 +30,6 @@ bld/
 [Bb]in/
 [Oo]bj/
 [Oo]ut/
-[Ll]og/
-[Ll]ogs/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -371,6 +369,15 @@ env/
 # Ignoring test result files
 *.html
 
+# Exclude HTML files in the templates directory and all its subdirectories
+!**/templates/**/*.html
+
 # Database config
 database.ini
 
+# .env
+.env
+/virtual_env
+/python=3.12
+/env
+/venv
