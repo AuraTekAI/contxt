@@ -5,6 +5,9 @@ from django.conf import settings
 
 from celery import shared_task
 
+"""
+Not used because moved this into entry_point_for_bots function
+"""
 @shared_task(base=CustomExceptionHandler, bind=True, queue='scheduling_queue')
 def schedule_accept_invites(self):
     """

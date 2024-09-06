@@ -4,6 +4,13 @@ from django.utils.functional import cached_property
 
 import ssl
 
+"""
+This custom backend ensures that there are no ssl errors when sending emails from django.
+
+Returns:
+    _type_: SSLContext
+"""
+
 class EmailBackend(SMTPBackend):
   @cached_property
   def ssl_context(self):
