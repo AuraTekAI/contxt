@@ -42,7 +42,7 @@ class Command(BaseCommand):
         quota = self.check_quota(settings.API_KEY, logger=sms_quota_logger)
         if quota is not None:
             sms_quota_logger.info(f"Current SMS quota: {quota}")
-            if quota == 0:
+            if quota == 0 or quota < 100:
                 send_quota_limit_reached_email_task.delay(quota)
             else:
                 logger.info(f"SMS sending process Started for bot = {bot_id}")
