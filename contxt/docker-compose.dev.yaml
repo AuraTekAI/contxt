@@ -99,14 +99,6 @@ services:
     depends_on:
       - web
 
-  splash:
-    container_name: splash
-    restart: unless-stopped
-    image: scrapinghub/splash:latest
-    ports:
-      - "8050:8050"
-    networks:
-      - internal_network
 
 volumes:
   local-db-data:
@@ -115,4 +107,5 @@ volumes:
 
 networks:
   internal_network:
-    driver: bridge
+    driver: overlay
+    external: true
