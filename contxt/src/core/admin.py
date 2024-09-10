@@ -81,22 +81,27 @@ class ContactAdmin(admin.ModelAdmin):
             return self.readonly_fields + ('user',)
         return self.readonly_fields
 
+class ContactManagementResponseMessagesAdmin(admin.ModelAdmin):
+    list_display = ('user', 'email', 'bot', 'message_id', 'status', 'response_content', 'created_at', 'updated_at')
+    list_filter = ('status', 'created_at', 'user', 'email', 'bot')
+    search_fields = ('message_id', 'response_content')
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at', 'updated_at')
 
-# Registers the UserMessage model with the Django admin interface.
-# This allows the UserMessage model to be managed through the Django admin interface.
-admin.site.register(UserMessage)
+    def get_readonly_fields(self, request, obj=None):
+        # Optionally make fields readonly based on user or other conditions
+        if request.user.is_superuser:
+            return self.readonly_fields
+        return ('created_at', 'updated_at')
 
-# Registers the Log model with the Django admin interface.
-# This allows the Log model to be managed through the Django admin interface.
-admin.site.register(Log)
 
 # Registers the Contact model with the Django admin interface.
 # This allows the Contact model to be managed through the Django admin interface.
 admin.site.register(Contact, ContactAdmin)
 
-# Registers the TransactionHistory model with the Django admin interface.
-# This allows the TransactionHistory model to be managed through the Django admin interface.
-admin.site.register(TransactionHistory)
+# Registers the Contact model with the Django admin interface.
+# This allows the Contact model to be managed through the Django admin interface.
+admin.site.register(ContactManagementResponseMessages, ContactManagementResponseMessagesAdmin)
 
 # Unregisters the Group model from the Django admin interface.
 # The Group model is removed from the admin interface as it is not required to be managed here.

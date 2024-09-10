@@ -1,6 +1,7 @@
 
 from accounts.models import User, BotAccount
 from contxt.utils.constants import *
+from process_emails.models import Email
 
 from django.db import models
 from django.utils import timezone
@@ -186,4 +187,32 @@ class ProcessedData(models.Model):
             models.Index(fields=['processed_at']),
             models.Index(fields=['created_at']),
             models.Index(fields=['bot', 'status']),
+        ]
+
+class ContactManagementResponseMessages(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    email = models.ForeignKey(Email, on_delete=models.SET_NULL, null=True, blank=True)
+    bot = models.ForeignKey(BotAccount, on_delete=models.SET_NULL, null=True, blank=True)
+
+    message_id = models.CharField(max_length=255)
+    response_content = models.TextField()
+
+    status = models.CharField(max_length=50, choices=CONTACT_MANAGEMENT_RESPONSE_STATUS_CHOICES, default='pending')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Response to {self.user} with message ID {self.message_id}"
+
+    class Meta:
+        db_table = 'contact_management_response_messages'
+        verbose_name = 'Contact management response message'
+        verbose_name_plural = 'Contact management response messages'
+        indexes = [
+            models.Index(fields=['user']),
+            models.Index(fields=['email']),
+            models.Index(fields=['status']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['message_id']),
         ]
