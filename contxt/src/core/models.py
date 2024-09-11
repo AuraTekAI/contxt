@@ -190,29 +190,23 @@ class ProcessedData(models.Model):
         ]
 
 class ContactManagementResponseMessages(models.Model):
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    email = models.ForeignKey(Email, on_delete=models.SET_NULL, null=True, blank=True)
-    bot = models.ForeignKey(BotAccount, on_delete=models.SET_NULL, null=True, blank=True)
 
-    message_id = models.CharField(max_length=255)
+    message_key = models.CharField(max_length=100, unique=True, null=True, blank=True)
     response_content = models.TextField()
-
-    status = models.CharField(max_length=50, choices=CONTACT_MANAGEMENT_RESPONSE_STATUS_CHOICES, default='pending')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Response to {self.user} with message ID {self.message_id}"
+        return f"Key {self.message_key} with content {self.response_content}"
 
     class Meta:
         db_table = 'contact_management_response_messages'
         verbose_name = 'Contact management response message'
         verbose_name_plural = 'Contact management response messages'
+
         indexes = [
-            models.Index(fields=['user']),
-            models.Index(fields=['email']),
-            models.Index(fields=['status']),
+            models.Index(fields=['message_key']),
             models.Index(fields=['created_at']),
-            models.Index(fields=['message_id']),
+            models.Index(fields=['updated_at'])
         ]

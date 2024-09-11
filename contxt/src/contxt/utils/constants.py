@@ -53,3 +53,54 @@ CONTACT_MANAGEMENT_RESPONSE_STATUS_CHOICES = [
     ('sent', 'Sent'),
     ('failed', 'Failed'),
 ]
+
+MESSAGES = {
+    'INVALID_PHONE_NUMBER': {
+        'type': 'error',
+        'content': "Invalid phone number format. Please provide a 10-digit valid phone number."
+    },
+    'INVALID_EMAIL': {
+        'type': 'error',
+        'content': "Invalid email address format. Please provide a valid email address."
+    },
+    'CONTACT_NAME_REQUIRED': {
+        'type': 'error',
+        'content': "Contact name is required. Please provide a name for the contact."
+    },
+    'CONTACT_NOT_FOUND': {
+        'type': 'error',
+        'content': "Contact {detail} not found."
+    },
+    'CONTACT_ALREADY_EXISTS': {
+        'type': 'info',
+        'content': "Contact {detail} already exists."
+    },
+    'CONTACT_ADDED_SUCCESSFULLY': {
+        'type': 'success',
+        'content': "Contact {detail} added successfully."
+    },
+    'CONTACT_UPDATED_SUCCESSFULLY': {
+        'type': 'success',
+        'content': "Contact {detail} updated successfully."
+    },
+    'CONTACT_REMOVED_SUCCESSFULLY': {
+        'type': 'success',
+        'content': "Contact {detail} removed successfully."
+    },
+    'UNKNOWN_COMMAND': {
+        'type': 'error',
+        'content': "Unknown command. Please provide a valid action (Add, Update, Remove, Contact List)."
+    },
+    'CONTACT_LIST': {
+        'type': 'info',
+        'content': 'Below is your current contact list: \n {all_contacts}'
+    },
+    'EMAIL_REQUIRED_FOR_ADD': {
+        'type': 'error',
+        'content': 'Email is required for adding a new email.'
+    },
+    'EMAIL_REQUIRED_FOR_UPDATE': {
+        'type': 'error',
+        'content': 'Email is required for updating email.'
+    }
+}

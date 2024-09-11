@@ -82,9 +82,9 @@ class ContactAdmin(admin.ModelAdmin):
         return self.readonly_fields
 
 class ContactManagementResponseMessagesAdmin(admin.ModelAdmin):
-    list_display = ('user', 'email', 'bot', 'message_id', 'status', 'response_content', 'created_at', 'updated_at')
-    list_filter = ('status', 'created_at', 'user', 'email', 'bot')
-    search_fields = ('message_id', 'response_content')
+    list_display = ('message_key', 'response_content', 'created_at', 'updated_at')
+    list_filter = ('created_at', 'message_key')
+    search_fields = ('message_key', 'response_content')
     ordering = ('-created_at',)
     readonly_fields = ('created_at', 'updated_at')
 

@@ -2,6 +2,7 @@
 from process_emails.models import Email
 from sms_app.models import SMS
 from accounts.models import BotAccount
+from process_emails.email_processing_service import EmailProcessingHandler
 
 from django.conf import settings
 
@@ -72,6 +73,9 @@ def save_emails(emails_to_save=None):
             )
         except Exception as e:
             pull_email_logger.error(f'Error occurred while saving Email to database: {email} {e}')
+
+        # after all the emails have been pulled and saved in database, run contact management to add, update and remove contacts
+        EmailProcessingHandler(bot_id=5)
 
 
 def convert_cookies_to_splash_format(splash_cookies=None, cookies=None):
