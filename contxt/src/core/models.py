@@ -189,7 +189,7 @@ class ProcessedData(models.Model):
             models.Index(fields=['bot', 'status']),
         ]
 
-class ContactManagementResponseMessages(models.Model):
+class ResponseMessages(models.Model):
 
     message_key = models.CharField(max_length=100, unique=True, null=True, blank=True)
     response_content = models.TextField()
@@ -201,9 +201,9 @@ class ContactManagementResponseMessages(models.Model):
         return f"Key {self.message_key} with content {self.response_content}"
 
     class Meta:
-        db_table = 'contact_management_response_messages'
-        verbose_name = 'Contact management response message'
-        verbose_name_plural = 'Contact management response messages'
+        db_table = 'response_messages'
+        verbose_name = 'Response message'
+        verbose_name_plural = 'Response messages'
 
         indexes = [
             models.Index(fields=['message_key']),

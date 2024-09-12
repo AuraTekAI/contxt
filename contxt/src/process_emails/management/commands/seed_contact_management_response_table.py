@@ -1,6 +1,6 @@
 from contxt.utils.constants import MESSAGES
 from django.core.management.base import BaseCommand
-from core.models import ContactManagementResponseMessages
+from core.models import ResponseMessages
 
 class Command(BaseCommand):
     """
@@ -27,7 +27,7 @@ class Command(BaseCommand):
             # Loop through the predefined MESSAGES dictionary
             for message_key, message_data in MESSAGES.items():
                 # Update or create the message entry in the database based on the message key
-                message, created = ContactManagementResponseMessages.objects.update_or_create(
+                message, created = ResponseMessages.objects.update_or_create(
                     message_key=message_key,
                     defaults={
                         'response_content': message_data['content']  # Set the content of the message

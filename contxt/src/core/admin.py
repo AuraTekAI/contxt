@@ -101,7 +101,7 @@ admin.site.register(Contact, ContactAdmin)
 
 # Registers the Contact model with the Django admin interface.
 # This allows the Contact model to be managed through the Django admin interface.
-admin.site.register(ContactManagementResponseMessages, ContactManagementResponseMessagesAdmin)
+admin.site.register(ResponseMessages, ContactManagementResponseMessagesAdmin)
 
 # Unregisters the Group model from the Django admin interface.
 # The Group model is removed from the admin interface as it is not required to be managed here.
