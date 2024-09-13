@@ -1,6 +1,7 @@
 
 from accounts.models import User, BotAccount
 from contxt.utils.constants import *
+from process_emails.models import Email
 
 from django.db import models
 from django.utils import timezone
@@ -186,4 +187,26 @@ class ProcessedData(models.Model):
             models.Index(fields=['processed_at']),
             models.Index(fields=['created_at']),
             models.Index(fields=['bot', 'status']),
+        ]
+
+class ResponseMessages(models.Model):
+
+    message_key = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    response_content = models.TextField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Key {self.message_key} with content {self.response_content}"
+
+    class Meta:
+        db_table = 'response_messages'
+        verbose_name = 'Response message'
+        verbose_name_plural = 'Response messages'
+
+        indexes = [
+            models.Index(fields=['message_key']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['updated_at'])
         ]

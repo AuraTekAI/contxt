@@ -104,7 +104,6 @@ def update_logging_config():
 
     # Construct the path to the JSON file containing bot configurations
     config_file_path = os.path.join(os.path.dirname(settings.BASE_DIR), 'bot-accounts.json')
-    print(f'Config file path = {config_file_path}')
 
     # Open and read the JSON file containing bot configurations
     with open(config_file_path, 'r') as file:
