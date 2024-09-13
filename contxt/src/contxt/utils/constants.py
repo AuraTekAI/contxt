@@ -79,13 +79,12 @@ MESSAGES = {
         Thank you for choosing ConTXT as your inmate messaging service provider! Here are some basic instructions to get you started and connected to your cherished loved ones.
 
         Quick reference on subject line formatting for key ConTXT functions:
-        Add Contact Number
-        Add Contact Email
-        Update Contact Number
-        Update Contact Email
-        Remove Contact
+        Add [NAME] [PHONE NUMBER or EMAIL]
+        Update [NAME] [PHONE NUMBER or EMAIL]
+        Remove [NAME]
         Contact List
         Text [CONTACT]
+        [NUMBER OF THE PERSON]
         Set ScreenName
         Private
         Public
@@ -100,19 +99,23 @@ MESSAGES = {
         Subject: Text 5559996666
         Hi Person, I enjoyed our visit last week.
 
+        Example:
+        Subject: 5559996666
+        Hi Person, I enjoyed our visit last week.
+
         Note: The system will recognize 10 numbers formatted in any way as a phone number (with or without dashes).
 
         ------------------------------------------------------------------------------------------------------------------------------
         How to Add or Update a Contact:
 
         1. Compose a new CORRLINKS message to one of your ConTXT friend accounts.
-        2. Place "Add Contact" in the subject line.
+        2. Place "Add [NAME]" in the subject line.
         3. Include the contact's name followed by the email address or phone number in the body of the email.
 
         Example for adding:
-        Subject: Add Contact Number {Name_Of_The_Contact} {Phone_Number}
+        Subject: Add [NUMBER]
         OR
-        Subject: Add Contact Number {Name_Of_The_Contact} {Email}
+        Subject: Add [EMAIL]
 
         ------------------------------------------------------------------------------------------------------------------------------
         How to Review Your Contact List:
@@ -125,7 +128,7 @@ MESSAGES = {
         To remove a contact from your list, compose a new CORRLINKS message with "Remove Contact" in the subject line.
 
         Example:
-        Subject: Remove Contact {Name}
+        Subject: Remove [NAME]
 
         ------------------------------------------------------------------------------------------------------------------------------
         If you need assistance, contact support at info@contxts.net with the subject line “Support”."""
@@ -180,11 +183,9 @@ Thank you for choosing ConTXT as your inmate messaging service provider! Here ar
 some basic instructions to get you started and connected to your cherished loved ones.
 
 Quick reference on subject line formatting for key ConTXT functions:
-Add Contact Number
-Add Contact Email
-Update Contact Number
-Update Contact Email
-Remove Contact
+Add [NAME] [PHONE NUMBER or EMAIL]
+Update [NAME] [PHONE NUMBER or EMAIL]
+Remove [NAME]
 Contact List
 Text [CONTACT]
 Set ScreenName
@@ -202,6 +203,10 @@ Example:
 Subject: Text 5559996666
 Hi Bugs, I enjoyed our visit last week.
 
+Example:
+Subject: 5559996666
+Hi Bugs, I enjoyed our visit last week.
+
 Note: The system will recognize 10 numbers formatted in any way as a phone number, so you can add dashes, periods, spaces, or no spaces in the number, whatever you prefer.
 While this method will work, we highly suggest for both convenience and privacy that you first build your contact list.
 
@@ -209,7 +214,7 @@ While this method will work, we highly suggest for both convenience and privacy 
 How to Add or Update a Contact
 
 1. Compose a new CORRLINKS message to one of your ConTXT friend accounts.
-2. Place "Add Contact" in the subject line.
+2. Place "Add [NAME] [PHONE NUMBER or EMAIL]" in the subject line.
 3. Include the contact's name followed by the email address or phone number in the body of the email.
 - Contact names are not case-sensitive, so you can use all caps, no caps, or some caps.
 - You can add multiple contacts in one “Add Contact” message.
@@ -217,21 +222,21 @@ How to Add or Update a Contact
 - The system will recognize 10 numbers formatted in any way as a phone number, so you can add dashes, periods, spaces, or no spaces in the number, whatever you prefer.
 - The system will recognize a group of text with the @ symbol as an email address. Please note the system does not yet send emails, but you can add email addresses to your contact list anyway if you choose to do so.
 Example:
-Subject: Add Contact Number BugsB 5555555555
+Subject: Add BugsB 5555555555
 Example:
-Subject: Add Contact Email BugsB bugs@carrots.com
+Subject: Add BugsB bugs@carrots.com
 
 How to Update an Existing Contact
 
 Compose a new CORRLINKS message to one of your ConTXT friend accounts.
-Type “Update Contact” in the subject line.
+Type “Update [NAME] [PHONE NUMBER or EMAIL] in the subject line.
 Include the contact's name followed by the new email address or phone number in the body of the email.
 
 Example:
-Subject: Update Contact Email YosemiteSam sam@newwildwest.com
+Subject: Update YosemiteSam sam@newwildwest.com
 
 Example:
-Subject: Update Contact Number YosemiteSam 5555555555
+Subject: Update YosemiteSam 5555555555
 
 When the contact has been added or updated, you will receive a confirmation email from ConTXT Support
 informing you that your contact list has been updated along with a receipt of your complete
@@ -250,12 +255,12 @@ How to Remove a Contact
 
 To remove a contact from your list, please do the following:
 1. Compose a new CORRLINKS message to one of your ConTXT friend accounts.
-2. Type "Remove Contact" in the subject line.
+2. Type "Remove [NAME]" in the subject line.
 3. Type the name of the contact you wish to remove in the body.
 4. Click 'Send' in the top left corner of your screen.
 
 Example:
-Subject: Remove Contact Daffy
+Subject: Remove Daffy
 
 ------------------------------------------------------------------------------------------------------------------------------
 How to Set Your ScreenName for PenPal
@@ -340,13 +345,11 @@ Instructions for Adding/Updating Contacts:
 Compose a new CORRLINKS message to one of your ConTXT friend accounts.
 {bot_accounts}
 
-Place "Add Contact" in the subject line.
+Place "Add [NAME] [PHONE NUMBER or EMAIL]" in the subject line.
 
 Include the contact's name followed by the email address or phone number in the body of the email.
 
 Contact names are not case-sensitive, so you can use all caps, no caps, or some caps.
-
-You can add multiple contacts in one “Add Contact” message.
 
 To send a message to your contact, you will need to type out the name exactly as you did when you set up the contact, so consider leaving off last names or using an initial at the end if you have two contacts named Daffy, for example.
 
@@ -355,24 +358,24 @@ The system will recognize 10 numbers formatted in any way as a phone number, so 
 The system will recognize a group of text with the @ symbol as an email address. Please note the system does not yet send emails, but you can add email addresses to your contact list anyway if you choose to do so.
 
 Example:
-Subject: Add Contact Number BugsB 5555555555
+Subject: Add BugsB 5555555555
 Example:
-Subject: Add Contact Email BugsB bugs@carrots.com
+Subject: Add BugsB bugs@carrots.com
 
 
 Update an Existing Contact:
 
 Compose a new CORRLINKS message to one of your ConTXT friend accounts.
 
-Type “Update Contact” in the subject line.
+Type “Update [NAME] [PHONE NUMBER or EMAIL] in the subject line.
 
 Include the contact's name followed by the new email address or phone number in the body of the email.
 
 Example:
-Subject: Update Contact Email YosemiteSam sam@newwildwest.com
+Subject: Update YosemiteSam sam@newwildwest.com
 
 Example:
-Subject: Update Contact Number YosemiteSam 5555555555
+Subject: Update YosemiteSam 5555555555
 
 View Existing Contacts:
 

@@ -50,19 +50,23 @@ def save_emails(emails_to_save=None):
 
     Args:
         emails_to_save (list of dicts, optional): List of dictionaries, each containing email details to be saved.
-            Each dictionary must have the following keys: 'user_id', 'message_id', 'sent_datetime', 'subject', 'body'.
+            Each dictionary must have the following keys: 'user_id', 'message_id', 'sent_datetime', 'subject', 'body', 'bot_id'.
 
     Logs:
         - Error if `emails_to_save` is `None`.
         - Error if there is an exception while saving an email to the database.
     """
     if emails_to_save is None:
-        pull_email_logger.error('emails_to_save can not be empty.')
+        pull_email_logger.error('emails_to_save cannot be empty.')
         return None
+
+    bot_id = None  # Variable to hold the bot_id
 
     for email in emails_to_save:
         try:
             bot_obj = BotAccount.objects.filter(id=email['bot_id']).first()
+            if bot_obj:  # Extract bot_id from the first valid email
+                bot_id = email['bot_id']
             Email.objects.create(
                 user=email['user_id'],
                 message_id=email['message_id'],
@@ -74,8 +78,14 @@ def save_emails(emails_to_save=None):
         except Exception as e:
             pull_email_logger.error(f'Error occurred while saving Email to database: {email} {e}')
 
-        # after all the emails have been pulled and saved in database, run contact management to add, update and remove contacts
-        EmailProcessingHandler(bot_id=5)
+    # After saving all emails, run contact management to add, update, and remove contacts
+    if bot_id is not None:  # Ensure bot_id is available before passing to EmailProcessingHandler
+        try:
+            EmailProcessingHandler(bot_id=bot_id)
+        except Exception as e:
+            pull_email_logger.error(f'Error occurred while processing emails: {e}')
+    else:
+        pull_email_logger.error('No valid bot_id found in emails_to_save.')
 
 
 def convert_cookies_to_splash_format(splash_cookies=None, cookies=None):
