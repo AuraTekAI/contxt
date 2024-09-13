@@ -126,6 +126,19 @@ class Command(BaseCommand):
                 to_number = get_to_number_from_message_subject(subject)
 
                 contact = Contact.objects.filter(user_id=user_id, phone_number=to_number).first()
+                if not contact and to_number:
+                    contact, created = Contact.objects.update_or_create(
+                        email = f'{email.user.user_name}@gmail.com',
+                        defaults={
+                            'user': email.user,
+                            'contact_name': f'{email.user.user_name}_{to_number}',
+                            'phone_number' : to_number
+                        }
+                    )
+                elif not to_number:
+                    logger.error(f'Got an invalid number {subject}.')
+                    contact = None
+
                 if contact:
                     contact_id = contact.id
                     contact_name = contact.contact_name
@@ -171,7 +184,7 @@ class Command(BaseCommand):
                     except requests.RequestException as e:
                         logger.error(f"Request failed: {str(e)}")
                 else:
-                    logger.error(f'No contact found in database for number {to_number}.')
+                    logger.error(f'No contact found in database for number {to_number}. Also the number might be invalid so skipping saving it in database or sending sms')
 
     def check_sms_status(self, text_id, user_id, message_id, message_body, to_number, contact_id, retry_count=0, email=None, logger=None, sms_quota_logger=None, bot=None):
         try:
