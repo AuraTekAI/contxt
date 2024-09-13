@@ -189,6 +189,11 @@ LOGGING = {
             'style': '{',
         }
     },
+    "filters": {
+        "sql_log_filter": {
+            "()": 'contxt.utils.log_filters.SQLQueryFilter',
+        }
+    },
     'handlers': {
         'console': {
             'level': 'INFO',
@@ -255,6 +260,15 @@ LOGGING = {
             'filename': os.path.join(LOG_DIR, 'sms_webhook.log'),
             'formatter': 'verbose'
         },
+        'db_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'db.log'),
+            'formatter': 'verbose',
+            'filters': [
+                'sql_log_filter'
+            ]
+        },
     },
     'loggers': {
         'django': {
@@ -304,6 +318,11 @@ LOGGING = {
         },
         'sms_webhook': {
             'handlers': ['console', 'sms_webhook_file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+        'django.db.backends': {
+            'handlers': ['console', 'db_file'],
             'level': 'DEBUG',
             'propagate': False
         }
