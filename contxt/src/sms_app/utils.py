@@ -59,7 +59,7 @@ def log_incoming_request(request, logger):
     try:
         logger.debug(f'Body: {request.body.decode("utf-8")}')
     except Exception as e:
-        logger.error(f'Error occurred while logging post request body = {e}')
+        pass
     logger.debug(f'Request Data: {request.data}')
     logger.debug(f'----------------------------------------------')
 

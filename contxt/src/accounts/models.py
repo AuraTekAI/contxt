@@ -288,8 +288,8 @@ class BotAccount(models.Model):
 
     class Meta:
         db_table = 'bot_accounts'
-        verbose_name = 'bot_account'
-        verbose_name_plural = 'bot_accounts'
+        verbose_name = 'Bot account'
+        verbose_name_plural = 'Bot accounts'
         indexes = [
             models.Index(fields=['bot_name', 'is_active']),
             models.Index(fields=['email_address']),

@@ -47,7 +47,6 @@ class Command(BaseCommand):
         if not config_file_path:
             # Move up one directory from BASE_DIR (which is `src`) and set the file path
             config_file_path = os.path.join(os.path.dirname(settings.BASE_DIR), 'bot-accounts.json')
-            print(f'Config file path = {config_file_path}')
 
         # Step 2: Load bot configurations from the JSON file
         with open(config_file_path, 'r') as file:
