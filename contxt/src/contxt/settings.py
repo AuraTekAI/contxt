@@ -260,6 +260,12 @@ LOGGING = {
             'filename': os.path.join(LOG_DIR, 'sms_webhook.log'),
             'formatter': 'verbose'
         },
+        'push_new_email_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'push_new_email.log'),
+            'formatter': 'verbose'
+        },
         'db_file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
@@ -318,6 +324,11 @@ LOGGING = {
         },
         'sms_webhook': {
             'handlers': ['console', 'sms_webhook_file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+        'push_new_email': {
+            'handlers': ['console', 'push_new_email_file'],
             'level': 'DEBUG',
             'propagate': False
         },

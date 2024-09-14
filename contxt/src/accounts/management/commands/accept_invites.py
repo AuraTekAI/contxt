@@ -4,14 +4,13 @@ from accounts.utils import get_email_password_url, MAP_EMAIL_URL_TO_EMAIL_SEARCH
 from accounts.login_service import SessionManager
 from contxt.utils.helper_functions import get_lua_script_absolute_path, save_screenshots_to_local
 from contxt.utils.constants import CURRENT_TASKS_RUN_BY_BOTS
+from process_emails.utils import convert_cookies_to_splash_format
+from process_emails.utils import send_welcome_email
 
 from django.core.management.base import BaseCommand
-
-
-from process_emails.utils import convert_cookies_to_splash_format
+from django.conf import settings
 
 from selectolax.lexbor import LexborHTMLParser
-from django.conf import settings
 
 import logging
 import json
@@ -440,6 +439,8 @@ def process_invitation(bot_id=None, logger=None, is_accept_invite=False):
         response_value = navigate_enter_code_accept_invite(session=session, invitation_code=invite_code, email_id=email_id, lua_script=lua_script, logger=logger, bot_id=bot_id, is_accept_invite=is_accept_invite)
 
         if not response_value == None:
+            if is_accept_invite:
+                send_welcome_email(is_accept_invite=is_accept_invite, bot_id=bot_id, pic_name=value[0])
             message = f'Invite code {invite_code} processed successfully.'
             message += response_value.get('message')
             logger.info(f'Output for {invite_code} = {response_value}')

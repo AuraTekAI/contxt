@@ -1,6 +1,6 @@
 
 from accounts.login_service import SessionManager
-from process_emails.utils import convert_cookies_to_splash_format, get_messages_to_send_from_database, update_sms_processed_value
+from process_emails.utils import convert_cookies_to_splash_format, transform_name
 from contxt.utils.helper_functions import save_screenshots_to_local, get_lua_script_absolute_path
 from contxt.utils.constants import CURRENT_TASKS_RUN_BY_BOTS
 
@@ -39,12 +39,13 @@ class Command(BaseCommand):
             Main method to handle the push email process including retrieving messages and sending replies.
     """
     help = 'Run the push email process to send replies.'
-    command_name = CURRENT_TASKS_RUN_BY_BOTS['push_emails']
+    command_name = CURRENT_TASKS_RUN_BY_BOTS['push_new_email']
 
     def add_arguments(self, parser):
-        parser.add_argument('--message_id', type=str, help='The ID of the message (optional).')
+        parser.add_argument('--pic_name', type=str, help='The ID of the message (optional).')
         parser.add_argument('--message_content', type=str, help='The content of the message (optional).')
         parser.add_argument('--bot_id', type=int, help='The bot id for the bot executing tasks.')
+        parser.add_argument('--is_accept_invite', type=bool, help='The bot id for the bot executing tasks.')
 
     def handle(self, *args, **kwargs):
         """
@@ -60,22 +61,23 @@ class Command(BaseCommand):
             None
         """
 
-        message_id = kwargs.get('message_id')
+        pic_name = kwargs.get('pic_name')
         message_content = kwargs.get('message_content')
         bot_id = kwargs.get('bot_id')
+        is_accept_invite = kwargs.get('is_accept_invite')
 
         if bot_id:
             logger = logging.getLogger(f'bot_{bot_id}_{self.command_name}')
         else:
-            logger = logging.getLogger('push_email')
+            logger = logging.getLogger('push_new_email')
 
         logger.info(f'Push Email got bot id = {bot_id} ')
 
-        session = SessionManager.get_session(bot_id=bot_id)
+        session = SessionManager.get_session(bot_id=bot_id, is_accept_invite=is_accept_invite)
         if not session:
             logger.error(f"Failed to retrieve session for bot = {bot_id}.")
             return
-        self.run_push_email(session=session, message_id=message_id, message_content=message_content, bot_id=bot_id, logger=logger)
+        self.run_push_new_email(session=session, pic_name=pic_name, message_content=message_content, bot_id=bot_id, logger=logger, is_accept_invite=is_accept_invite)
 
     def capture_session_state(self, session, logger):
         """
@@ -132,7 +134,7 @@ class Command(BaseCommand):
                 f.write(response.text)
         logger.info(f"=====================")
 
-    def send_email_reply(self, session, message_content, message_id, session_state, logger):
+    def send_new_email(self, session, message_content, pic_name, session_state, logger):
         """
         Sends an email reply using the Splash service.
 
@@ -147,7 +149,7 @@ class Command(BaseCommand):
         Returns:
             bool: True if the reply was sent successfully, False otherwise.
         """
-        reply_url = f"https://www.corrlinks.com/NewMessage.aspx"
+        new_message_url = f"https://www.corrlinks.com/NewMessage.aspx"
 
         lua_script_path = get_lua_script_absolute_path(relative_path='lua_scripts/send_new_emails.lua')
         with open(lua_script_path, 'r') as file:
@@ -164,14 +166,16 @@ class Command(BaseCommand):
 
         cookie_header = "; ".join([f"{key}={value}" for key, value in cookies.items()])
 
+        pic_name = transform_name(pic_name)
         params = {
             'lua_source': lua_script,
             'message_content': message_content,
-            'reply_url': reply_url,
-            'pic_number' : '09527510',
+            'new_message_url': new_message_url,
+            'pic_name' : pic_name,
             'headers': headers,
             'cookies': cookie_header,
-            'splash_cookies': splash_cookies
+            'splash_cookies': splash_cookies,
+            'message' : message_content
         }
 
         result = None
@@ -192,20 +196,20 @@ class Command(BaseCommand):
                 save_screenshots_to_local(result=result, logger_name=logger.name)
                 self.log_response_info(response=response, is_splash_response=True, retry_number=retry_number + 1, logger=logger)
 
-            if response.status_code == 200 and result['element_found'] and result['text_box_message'] != 'Text box not found':
+            if response.status_code == 200 and not result.get('found_row') == None:
                 request_success = True
                 break
 
         if response.status_code == 200 and request_success:
-            logger.info('Reply sent successfully.')
+            logger.info('New message sent successfully.')
             logger.info('----------------------------------')
             return True
 
-        logger.error(f'Something went wrong in send_reply_email.')
+        logger.error(f'Something went wrong in send_new_email.')
         logger.error('----------------------------------')
         return False
 
-    def run_push_email(self, session=None, message_id=None, message_content=None, bot_id=None, logger=None):
+    def run_push_new_email(self, session=None, pic_name=None, message_content=None, bot_id=None, logger=None, is_accept_invite=None):
         """
         Runs the push email process, retrieving messages from the database and sending replies.
 
@@ -222,39 +226,32 @@ class Command(BaseCommand):
             sys.exit(1)
         message_id_content = []
 
+
         if settings.TEST_MODE == True:
-            message_id = "3735999911"
-            message_content = "This is a test reply message sent from local. Please ignore these messages. Apologies for any inconvenience."
-            message_id_content.append([None, message_id, message_content])
-        elif message_id and message_content:
-            message_id_content.append([None, message_id, message_content])
-        else:
-            message_id_content = get_messages_to_send_from_database(message_id_content=message_id_content, bot_id=bot_id)
+            pic_name = "CASSANDRA WALLACE"
+            message_content = "This is a test welcome message sent from local. Please ignore these messages. Apologies for any inconvenience."
+            message_id_content.append([pic_name, message_content])
+        elif pic_name and message_content:
+            message_id_content.append([pic_name, message_content])
 
         if not message_id_content:
-            logger.info('No SMS messages found to process at the moment.')
-            return "No SMS messages found to process at the moment."
+            logger.info('Welcome message content was not found. Or the pic_name was not sent.')
+            return "Welcome message content was not found. Or the pic_name was not sent."
 
         session_state = self.capture_session_state(session, logger=logger)
 
-        for sms_data in message_id_content:
-            sms_id, message_id, message_content = sms_data
-            if message_id and message_content:
-                success = self.send_email_reply(session=session, message_content=message_content, message_id=message_id, session_state=session_state, logger=logger)
-            else:
-                continue
 
-            if success:
-                if not settings.TEST_MODE == True and not sms_id == None:
-                    status = update_sms_processed_value(sms_id=sms_id)
-                    if status:
-                        logger.info('SMS processed value updated successfully.')
-                    else:
-                        logger.error('An error occurred while updating SMS processed value.')
-                logger.info(f"Email reply sent successfully  sms_id = {sms_id} message_id = {message_id}")
-                logger.info("------------------------------------------------------")
-            else:
-                logger.error(f"Failed to send email reply. sms_id = {sms_id} message_id = {message_id}. Check {logger.name}.log for details.")
-                logger.info("------------------------------------------------------")
-        return f"Push email operation completed. Check {logger.name}.log for details."
+        pic_name, message_content = message_id_content[0]
+        if pic_name and message_content:
+            success = self.send_new_email(session=session, message_content=message_content, pic_name=pic_name, session_state=session_state, logger=logger)
+        else:
+            success = False
+
+        if success:
+            logger.info(f"New Email sent successfully to pic_name = {pic_name}")
+            logger.info("------------------------------------------------------")
+        else:
+            logger.error(f"Failed to send new email to pic_name = {pic_name}. Check {logger.name}.log for details.")
+            logger.info("------------------------------------------------------")
+        return f"Push new email operation completed. Check {logger.name}.log for details."
 

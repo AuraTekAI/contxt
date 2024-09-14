@@ -37,6 +37,7 @@ CURRENT TASKS RUN BY BOTS
 CURRENT_TASKS_RUN_BY_BOTS = {
     'send_sms' : 'send_sms',
     'push_emails' : 'push_emails',
+    'push_new_email' : 'push_new_emails',
     'pull_emails' : 'pull_emails',
     'accept_invites' : 'accept_invites',
     'receive_sms' : 'receive_sms',
@@ -58,80 +59,75 @@ MESSAGES = {
     'WELCOME_STATUS': {
         'type': 'info',
         'content': """Subject line: Welcome to ConTXT! Your Messaging Status and Guide
+------------------------------------------------------------------------------------------------------------------------------
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        MESSAGE STATUS FOR EXISTING USERS
+You have ## of 500 messages remaining for the month. Your 500 messages refresh on DATE.
 
-        Here is the status of your last 20 messages:
-        DATE      TIME       CONTACT        MESSAGE ID      DELIVERED
+------------------------------------------------------------------------------------------------------------------------------
+CURRENT CONTXT ACCOUNTS TO FRIEND
 
-        You have ## of 500 messages remaining for the month. Your 500 messages refresh on DATE.
+Friend the following accounts to start messaging:
+{bot_account}
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        CURRENT CONTXT ACCOUNTS TO FRIEND
+------------------------------------------------------------------------------------------------------------------------------
+GET STARTED GUIDE
 
-        Friend the following accounts to start messaging:
-        {bot_accounts}
+Thank you for choosing ConTXT as your inmate messaging service provider! Here are some basic instructions to get you started and connected to your cherished loved ones.
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        GET STARTED GUIDE
+Quick reference on subject line formatting for key ConTXT functions:
+Add [NAME] [PHONE NUMBER or EMAIL]
+Update [NAME] [PHONE NUMBER or EMAIL]
+Remove [NAME]
+Contact List
+Text [CONTACT]
+[NUMBER OF THE PERSON]
+Set ScreenName
+Private
+Public
+PenPal [SCREENNAME]
 
-        Thank you for choosing ConTXT as your inmate messaging service provider! Here are some basic instructions to get you started and connected to your cherished loved ones.
+------------------------------------------------------------------------------------------------------------------------------
+How to Send a Text to a Number:
 
-        Quick reference on subject line formatting for key ConTXT functions:
-        Add [NAME] [PHONE NUMBER or EMAIL]
-        Update [NAME] [PHONE NUMBER or EMAIL]
-        Remove [NAME]
-        Contact List
-        Text [CONTACT]
-        [NUMBER OF THE PERSON]
-        Set ScreenName
-        Private
-        Public
-        PenPal [SCREENNAME]
+You may send an SMS message directly by placing the recipient's number, area code included, into the subject line of a newly composed CORRLINKS message.
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        How to Send a Text to a Number:
+Example:
+Subject: Text 5559996666
+Hi Person, I enjoyed our visit last week.
 
-        You may send an SMS message directly by placing the recipient's number, area code included, into the subject line of a newly composed CORRLINKS message.
+Example:
+Subject: 5559996666
+Hi Person, I enjoyed our visit last week.
 
-        Example:
-        Subject: Text 5559996666
-        Hi Person, I enjoyed our visit last week.
+Note: The system will recognize 10 numbers formatted in any way as a phone number (with or without dashes).
 
-        Example:
-        Subject: 5559996666
-        Hi Person, I enjoyed our visit last week.
+------------------------------------------------------------------------------------------------------------------------------
+How to Add or Update a Contact:
 
-        Note: The system will recognize 10 numbers formatted in any way as a phone number (with or without dashes).
+1. Compose a new CORRLINKS message to one of your ConTXT friend accounts.
+2. Place "Add [NAME]" in the subject line.
+3. Include the contact's name followed by the email address or phone number in the body of the email.
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        How to Add or Update a Contact:
+Example for adding:
+Subject: Add [NUMBER]
+OR
+Subject: Add [EMAIL]
 
-        1. Compose a new CORRLINKS message to one of your ConTXT friend accounts.
-        2. Place "Add [NAME]" in the subject line.
-        3. Include the contact's name followed by the email address or phone number in the body of the email.
+------------------------------------------------------------------------------------------------------------------------------
+How to Review Your Contact List:
 
-        Example for adding:
-        Subject: Add [NUMBER]
-        OR
-        Subject: Add [EMAIL]
+To review your contact list, please compose a new CORRLINKS message with "Contact List" in the subject line.
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        How to Review Your Contact List:
+------------------------------------------------------------------------------------------------------------------------------
+How to Remove a Contact:
 
-        To review your contact list, please compose a new CORRLINKS message with "Contact List" in the subject line.
+To remove a contact from your list, compose a new CORRLINKS message with "Remove Contact" in the subject line.
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        How to Remove a Contact:
+Example:
+Subject: Remove [NAME]
 
-        To remove a contact from your list, compose a new CORRLINKS message with "Remove Contact" in the subject line.
-
-        Example:
-        Subject: Remove [NAME]
-
-        ------------------------------------------------------------------------------------------------------------------------------
-        If you need assistance, contact support at info@contxts.net with the subject line “Support”."""
+------------------------------------------------------------------------------------------------------------------------------
+If you need assistance, contact support at {bot_account} with the subject line “Support”."""
     },
 
     'SIGNUP_INSTRUCTIONS': {

@@ -1,5 +1,4 @@
 function main(splash, args)
-
     -- Initialize cookies from the initial request
     splash:init_cookies(args.splash_cookies)
 
@@ -13,7 +12,7 @@ function main(splash, args)
     })
 
     -- Open the initial page
-    splash:go(args.reply_url)
+    splash:go(args.new_message_url)
     splash:wait(1.5)
 
     -- Click the element in the address box
@@ -22,15 +21,18 @@ function main(splash, args)
     ]])
     splash:wait(1.5)
 
-    -- JavaScript to find and click the checkbox matching pic_number
-    local pic_number = args.pic_number
+    -- Get the already transformed name in "Last First Middle" format
+    local transformed_name = args.pic_name  -- This should already be in "Last First Middle" format
+
+    -- JavaScript to find and click the checkbox matching the transformed name
     local result = splash:evaljs([[
-        var pic_number = ']] .. pic_number .. [[';
+        var targetName = ']] .. transformed_name .. [[';
         var rows = document.querySelectorAll('#ctl00_mainContentPlaceHolder_addressBox_addressGrid tr');
         var found = null;
+
         for (var i = 1; i < rows.length; i++) {
             var addressCell = rows[i].cells[1];
-            if (addressCell && addressCell.textContent.includes(pic_number)) {
+            if (addressCell && addressCell.textContent.includes(targetName)) {
                 found = addressCell.textContent;
                 var checkbox = rows[i].querySelector('input[type="checkbox"]');
                 if (checkbox) {
@@ -49,9 +51,11 @@ function main(splash, args)
         document.getElementById('ctl00_mainContentPlaceHolder_subjectTextBox').value = 'Subject: Welcome to ConTXT';
     ]])
 
+    local message_to_send = args.message
+
     -- Input the message in the message text area
     splash:runjs([[
-        document.getElementById('ctl00_mainContentPlaceHolder_messageTextBox').value = 'A welcome message sent to you by ConTXT team. Thank you for choosing our services.';
+        document.getElementById('ctl00_mainContentPlaceHolder_messageTextBox').value = ']] .. message_to_send .. [[';
     ]])
 
     -- Call the sendMessage function directly
@@ -67,6 +71,5 @@ function main(splash, args)
         html = splash:html(),
         screenshot = splash:png(),
         found_row = result,
-        cookies = splash:get_cookies() -- Return cookies for subsequent requests
     }
 end
