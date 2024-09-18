@@ -6,42 +6,28 @@ from django.conf import settings
 
 from celery import shared_task
 
-"""
-Both tasks not used because moved this into entry_point_for_bots function
-"""
 @shared_task(base=CustomExceptionHandler, bind=True, queue='scheduling_queue')
-def schedule_pull_email(self):
+def push_new_email_task(self, pic_name=None, message_content=None, bot_id=None, is_accept_invite=None):
     """
-    Celery task for scheduling the pulling of emails.
-
-    This task is used to trigger the Django management command `pull_emails`, which processes unread emails
-    from the Corrlinks inbox. The task is executed only if the environment is not set to 'LOCAL'.
+    Celery task to run the push_new_emails management command.
 
     Args:
-        self (Task): The current task instance. Used for exception handling.
+        pic_name (str): The name to be processed (optional).
+        message_content (str): The content of the email message (optional).
+        bot_id (int): The bot ID executing the task (optional).
+        is_accept_invite (bool): Whether the bot accepts an invite (optional).
 
-    Notes:
-        - The task uses `CustomExceptionHandler` to handle any exceptions that occur during execution.
-        - The task is bound to the 'scheduling_queue' queue.
+    Returns:
+        str: The output or status of the command.
     """
-    if not settings.ENVIRONMENT == 'LOCAL':
-        call_command('pull_emails')
+    try:
+        call_command(
+            'push_new_emails',
+            pic_name=pic_name,
+            message_content=message_content,
+            bot_id=bot_id,
+            is_accept_invite=is_accept_invite
+        )
+    except Exception as e:
+        print(f'Error occurred = {e}')
 
-
-@shared_task(base=CustomExceptionHandler, bind=True, queue='scheduling_queue')
-def schedule_push_email(self):
-    """
-    Celery task for scheduling the pushing of email replies.
-
-    This task is used to trigger the Django management command `push_emails`, which sends email replies
-    as part of the push email process. The task is executed only if the environment is not set to 'LOCAL'.
-
-    Args:
-        self (Task): The current task instance. Used for exception handling.
-
-    Notes:
-        - The task uses `CustomExceptionHandler` to handle any exceptions that occur during execution.
-        - The task is bound to the 'scheduling_queue' queue.
-    """
-    if not settings.ENVIRONMENT == 'LOCAL':
-        call_command('push_emails')

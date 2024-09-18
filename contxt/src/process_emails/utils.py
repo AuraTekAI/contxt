@@ -1,14 +1,17 @@
 
 from process_emails.models import Email
+from process_emails.tasks import push_new_email_task
 from sms_app.models import SMS
 from accounts.models import BotAccount
 from process_emails.email_processing_service import EmailProcessingHandler
+from core.models import ResponseMessages
 
 from django.conf import settings
 
 from datetime import datetime, timedelta
 import logging
 import pytz
+import json
 
 
 pull_email_logger = logging.getLogger('pull_email')
@@ -170,3 +173,132 @@ def update_sms_processed_value(sms_id=None):
         return True
 
     return False
+
+
+def transform_name(name):
+    """
+    Transforms a name from the format "First Middle Last" to "Last First Middle".
+
+    This function takes a name string where the name is in the format of
+    "First Middle Last" (middle name is optional). It then rearranges the
+    name components to the format "Last First Middle". If no middle name is
+    present, the function will simply return the name as "Last First".
+
+    Parameters:
+    ----------
+    name : str
+        The input name in the format "First Middle Last". The name must
+        contain at least a first and last name, separated by spaces.
+
+    Returns:
+    -------
+    str
+        The transformed name in the format "Last First Middle". If no middle
+        name is provided, the output will be in the format "Last First".
+
+    Raises:
+    ------
+    ValueError:
+        If the input name has fewer than two parts (i.e., a first and last name).
+
+    Example:
+    -------
+    >>> transform_name("John Michael Smith")
+    'Smith John Michael'
+
+    >>> transform_name("Jane Doe")
+    'Doe Jane'
+    """
+
+    # Split the input name into parts by spaces
+    name_parts = name.split()
+
+    # Ensure that the name has at least two parts (first and last name)
+    if len(name_parts) < 2:
+        raise ValueError("Name must contain at least a first and last name")
+
+    # Extract the last name (the last part)
+    last_name = name_parts[-1]
+
+    # Extract the first name (the first part)
+    first_name = name_parts[0]
+
+    # The middle name is everything in between (if it exists)
+    middle_name = " ".join(name_parts[1:-1])
+
+    # Rearrange into the "Last First Middle" format
+    if middle_name:
+        transformed_name = f"{last_name} {first_name} {middle_name}"
+    else:
+        transformed_name = f"{last_name} {first_name}"
+
+    return transformed_name
+
+
+def send_welcome_email(is_accept_invite=False, bot_id=None, pic_name='', logger=None):
+    """
+    Sends a welcome email using a randomly selected bot account.
+
+    This function retrieves a random bot account from the database and sends a welcome email to the recipient
+    specified by the `pic_name` parameter. The email content is generated based on a template defined in
+    the `ResponseMessages` model, specifically filtering for the message with the `WELCOME_STATUS` key. If
+    no bot account is found or no welcome message exists, fallback logic is used.
+
+    Args:
+        is_accept_invite (bool, optional): Indicates whether the bot is accepting an invitation. Defaults to False.
+        bot_id (int, optional): The ID of the bot executing the task. Defaults to None.
+        pic_name (str, optional): The name of the person to whom the welcome email is sent. Defaults to an empty string.
+
+    Returns:
+        None: This function doesn't return any value but sends a task to the Celery queue to process the email.
+
+    Workflow:
+        1. Retrieves a random bot account from the `BotAccount` model. If no account is found, sets an empty value for the bot account in the message.
+        2. Retrieves the welcome message from the `ResponseMessages` model with the `WELCOME_STATUS` key.
+        3. Formats the welcome message by injecting the bot account's email address (if available) into the message content.
+        4. If no welcome message is found, uses a default fallback message.
+        5. Uses the `push_new_email_task` Celery task to send the email message with the generated content and the provided `pic_name`.
+
+    Example:
+        send_welcome_email(is_accept_invite=True, bot_id=123, pic_name='John Doe')
+
+    Raises:
+        None: No exceptions are raised directly by this function.
+    """
+    try:
+        bot_account = BotAccount.objects.order_by('?').first()
+    except Exception as e:
+        bot_account = None
+
+    message_args = {}
+    if bot_account:
+        message_args['bot_account'] = '\n'.join([f"{bot_account.email_address}"])
+    else:
+        message_args['bot_account'] = ''
+
+    if pic_name:
+        message_args['first_name'] = pic_name
+    else:
+        message_args['first_name'] = 'User'
+
+    try:
+        welcome_message = ResponseMessages.objects.filter(message_key='WELCOME_STATUS').first()
+    except Exception as e:
+        welcome_message = None
+
+    if welcome_message:
+        formatted_message = welcome_message.response_content.format(**message_args)
+    else:
+        welcome_message = 'Welcome to ConTXT. Something went wrong while sending a message to you. You can send a message to info@contxts.net with subject Support and we will get back to you. Regards Team ConTXT.'
+        welcome_message = json.dumps(welcome_message)
+        formatted_message = welcome_message
+
+    formatted_message = json.dumps(formatted_message)
+
+    logger.info(f'In utils for sending new email welcome email. message = {formatted_message}. pic_name = {pic_name}. bot_id = {bot_id}. is_accept_invite = {is_accept_invite}')
+
+    pic_name = pic_name
+    if not pic_name == None:
+        push_new_email_task.delay(pic_name=pic_name, message_content=formatted_message, bot_id=bot_id, is_accept_invite=is_accept_invite)
+    else:
+        logger.error('Pic number cannot be empty')
