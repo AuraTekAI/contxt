@@ -1,3 +1,17 @@
+-- Custom function to replace \n with \\n
+local function escape_newlines(str)
+    local result = ""
+    for i = 1, #str do
+        local char = str:sub(i, i)
+        if char == "\n" then
+            result = result .. "\\n"
+        else
+            result = result .. char
+        end
+    end
+    return result
+end
+
 function main(splash, args)
     -- Initialize cookies from the initial request
     splash:init_cookies(args.splash_cookies)
@@ -22,7 +36,7 @@ function main(splash, args)
     splash:wait(1.5)
 
     -- Get the already transformed name in "Last First Middle" format
-    local transformed_name = args.pic_name  -- This should already be in "Last First Middle" format
+    local transformed_name = args.pic_name
 
     -- JavaScript to find and click the checkbox matching the transformed name
     local result = splash:evaljs([[
@@ -46,18 +60,35 @@ function main(splash, args)
     splash:wait(1)
     splash:init_cookies(args.splash_cookies)
 
-    -- Input the subject "Welcome to ConTXT" in the subject text box
     splash:runjs([[
-        document.getElementById('ctl00_mainContentPlaceHolder_subjectTextBox').value = 'Subject: Welcome to ConTXT';
+        document.getElementById('ctl00_mainContentPlaceHolder_addressBox_okButton').click();
     ]])
 
+    -- Allow time for postback or processing
+    splash:wait(2.5)
+
+    -- Check message_to_send and handle string escaping manually
     local message_to_send = args.message
 
-    -- Input the message in the message text area
+    -- Ensure message_to_send is a string and not nil
+    if not message_to_send or type(message_to_send) ~= "string" then
+        return {error = "message_to_send is nil or not a string", message_to_send = tostring(message_to_send)}
+    end
+
     splash:runjs([[
-        document.getElementById('ctl00_mainContentPlaceHolder_messageTextBox').value = ']] .. message_to_send .. [[';
+        document.getElementById('ctl00_mainContentPlaceHolder_subjectTextBox').value = 'Subject: Welcome to ConTXT! Your Messaging Guide.';
     ]])
 
+    -- Escape newlines manually using the custom function
+    local escaped_message = escape_newlines(message_to_send)
+
+    -- Insert the escaped message into the textarea
+    splash:runjs([[
+        var textarea = document.getElementById('ctl00_mainContentPlaceHolder_messageTextBox');
+        textarea.value = ']] .. escaped_message .. [[';
+    ]])
+
+    splash:init_cookies(args.splash_cookies)
     -- Call the sendMessage function directly
     splash:runjs([[
         sendMessage(new Event('click'));
@@ -66,10 +97,15 @@ function main(splash, args)
     -- Allow time for postback or processing
     splash:wait(2.5)
 
-    -- Return HTML, screenshot, and found row content
+    -- Return the final state and the escaped message for confirmation
     return {
         html = splash:html(),
         screenshot = splash:png(),
         found_row = result,
+        final_url = splash:url(),
+        escaped_message = escaped_message -- The message after manual escaping
     }
 end
+
+
+

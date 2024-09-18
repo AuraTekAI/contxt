@@ -276,6 +276,11 @@ def send_welcome_email(is_accept_invite=False, bot_id=None, pic_name='', logger=
     else:
         message_args['bot_account'] = ''
 
+    if pic_name:
+        message_args['first_name'] = pic_name
+    else:
+        message_args['first_name'] = 'User'
+
     try:
         welcome_message = ResponseMessages.objects.filter(message_key='WELCOME_STATUS').first()
     except Exception as e:
@@ -296,4 +301,4 @@ def send_welcome_email(is_accept_invite=False, bot_id=None, pic_name='', logger=
     if not pic_name == None:
         push_new_email_task.delay(pic_name=pic_name, message_content=formatted_message, bot_id=bot_id, is_accept_invite=is_accept_invite)
     else:
-        print('Pic number cannot be empty')
+        logger.error('Pic number cannot be empty')

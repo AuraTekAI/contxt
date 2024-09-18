@@ -1,6 +1,7 @@
 
 from accounts.login_service import SessionManager
 from process_emails.utils import convert_cookies_to_splash_format, transform_name
+from core.models import ResponseMessages
 from contxt.utils.helper_functions import save_screenshots_to_local, get_lua_script_absolute_path
 from contxt.utils.constants import CURRENT_TASKS_RUN_BY_BOTS
 
@@ -228,8 +229,15 @@ class Command(BaseCommand):
 
 
         if settings.TEST_MODE == True:
-            pic_name = "CASSANDRA WALLACE"
+            pic_name = "VIRGINIA ISABEL FUENTES"
             message_content = "This is a test welcome message sent from local. Please ignore these messages. Apologies for any inconvenience."
+
+            welcome_message = ResponseMessages.objects.filter(message_key='WELCOME_STATUS').first()
+            message_args = {}
+            message_args['first_name'] = 'VIRGINIA'
+            message_args['bot_account'] = 'forestpineneedle@gmail.com'
+            message_content = welcome_message.response_content.format(**message_args)
+
             message_id_content.append([pic_name, message_content])
         elif pic_name and message_content:
             message_id_content.append([pic_name, message_content])
