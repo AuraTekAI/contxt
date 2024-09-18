@@ -260,6 +260,12 @@ LOGGING = {
             'filename': os.path.join(LOG_DIR, 'sms_webhook.log'),
             'formatter': 'verbose'
         },
+        'push_new_email_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOG_DIR, 'push_new_email.log'),
+            'formatter': 'verbose'
+        },
         'db_file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
@@ -318,6 +324,11 @@ LOGGING = {
         },
         'sms_webhook': {
             'handlers': ['console', 'sms_webhook_file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+        'push_new_email': {
+            'handlers': ['console', 'push_new_email_file'],
             'level': 'DEBUG',
             'propagate': False
         },
@@ -426,6 +437,8 @@ HEADERS_FOR_PUSH_EMAIL_REQUEST = json.loads(env('HEADERS_FOR_PUSH_EMAIL_REQUEST'
 MAX_EMAIL_REPLY_RETRIES = int(env('MAX_EMAIL_REPLY_RETRIES'))
 STATIC_COOKIES = json.loads(env('STATIC_COOKIES'))
 
+HEADERS_FOR_NEW_EMAIL_REQUEST = json.loads(env('HEADERS_FOR_NEW_EMAIL_REQUEST'))
+MAX_NEW_EMAIL_RETRIES = int(env('MAX_NEW_EMAIL_RETRIES'))
 
 USE_ALTERNATE_EMAIL = env('USE_ALTERNATE_EMAIL')
 if USE_ALTERNATE_EMAIL == 'True' or USE_ALTERNATE_EMAIL == 'true':

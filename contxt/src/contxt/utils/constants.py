@@ -37,6 +37,7 @@ CURRENT TASKS RUN BY BOTS
 CURRENT_TASKS_RUN_BY_BOTS = {
     'send_sms' : 'send_sms',
     'push_emails' : 'push_emails',
+    'push_new_email' : 'push_new_emails',
     'pull_emails' : 'pull_emails',
     'accept_invites' : 'accept_invites',
     'receive_sms' : 'receive_sms',
@@ -57,81 +58,126 @@ CONTACT_MANAGEMENT_RESPONSE_STATUS_CHOICES = [
 MESSAGES = {
     'WELCOME_STATUS': {
         'type': 'info',
-        'content': """Subject line: Welcome to ConTXT! Your Messaging Status and Guide
+        'content': """Subject: Welcome to ConTXT! Your Messaging Guide.
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        MESSAGE STATUS FOR EXISTING USERS
+{first_name},
 
-        Here is the status of your last 20 messages:
-        DATE      TIME       CONTACT        MESSAGE ID      DELIVERED
+Welcome to ConTXT, your inmate messaging service provider! We’re excited to help you stay connected with your loved ones. This email contains important information about your account and how to use our services.
 
-        You have ## of 500 messages remaining for the month. Your 500 messages refresh on DATE.
+GET STARTED GUIDE
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        CURRENT CONTXT ACCOUNTS TO FRIEND
+To begin using ConTXT, please follow these steps:
 
-        Friend the following accounts to start messaging:
-        {bot_accounts}
+Friend ConTXT Accounts
+    Friend the following accounts to start messaging:
+        {bot_account}
+Set Up Your Contact List
+    Add contacts using the instructions in the “MANAGING YOUR CONTACT LIST” section below.
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        GET STARTED GUIDE
+Start Messaging
+    Send messages to your contacts using the instructions in the “SENDING MESSAGES” section below.
 
-        Thank you for choosing ConTXT as your inmate messaging service provider! Here are some basic instructions to get you started and connected to your cherished loved ones.
+QUICK REFERENCE GUIDE
 
-        Quick reference on subject line formatting for key ConTXT functions:
-        Add [NAME] [PHONE NUMBER or EMAIL]
-        Update [NAME] [PHONE NUMBER or EMAIL]
-        Remove [NAME]
-        Contact List
-        Text [CONTACT]
-        [NUMBER OF THE PERSON]
-        Set ScreenName
-        Private
-        Public
-        PenPal [SCREENNAME]
+Use these subject line formats for key ConTXT functions:
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        How to Send a Text to a Number:
+    Add [CONTACT] [NUMBER]
+    Update [CONTACT] [NUMBER]
+    Remove [CONTACT]
+    Contact List
+    Text [CONTACT]
+    Set ScreenName [SCREENNAME] [AGE] [SEX]
+    Update ScreenName [SCREENNAME] [AGE] [SEX]
+    Private
+    Public
+    PenPal [SCREENNAME]
 
-        You may send an SMS message directly by placing the recipient's number, area code included, into the subject line of a newly composed CORRLINKS message.
+MANAGING YOUR CONTACT LIST
 
-        Example:
-        Subject: Text 5559996666
-        Hi Person, I enjoyed our visit last week.
+Adding a Contact:
 
-        Example:
-        Subject: 5559996666
-        Hi Person, I enjoyed our visit last week.
+    Compose a new CORRLINKS message to a ConTXT friend account.
+    Subject line: Add [CONTACT] [NUMBER]
+    Example: Add BugsB 555 555 5555
 
-        Note: The system will recognize 10 numbers formatted in any way as a phone number (with or without dashes).
+Updating a Contact:
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        How to Add or Update a Contact:
+- Compose a new CORRLINKS message to a ConTXT friend account.
+    Subject line: Update [CONTACT] [NUMBER]
+    Example: Update BugsB 9876543210
 
-        1. Compose a new CORRLINKS message to one of your ConTXT friend accounts.
-        2. Place "Add [NAME]" in the subject line.
-        3. Include the contact's name followed by the email address or phone number in the body of the email.
+Removing a Contact:
 
-        Example for adding:
-        Subject: Add [NUMBER]
-        OR
-        Subject: Add [EMAIL]
+- Compose a new CORRLINKS message to a ConTXT friend account.
+    Subject line: Remove [CONTACT]
+    Example: Remove BugsB
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        How to Review Your Contact List:
+Viewing Your Contact List:
 
-        To review your contact list, please compose a new CORRLINKS message with "Contact List" in the subject line.
+- Compose a new CORRLINKS message to a ConTXT friend account.
+    Subject line: Contact List
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        How to Remove a Contact:
+Note: Contact names are not case-sensitive. Use the exact name you set up when messaging.
 
-        To remove a contact from your list, compose a new CORRLINKS message with "Remove Contact" in the subject line.
+SETTING UP YOUR PENPAL PROFILE
 
-        Example:
-        Subject: Remove [NAME]
+ConTXT’s PenPal service allows you to message other users across our platform, regardless of location.
 
-        ------------------------------------------------------------------------------------------------------------------------------
-        If you need assistance, contact support at info@contxts.net with the subject line “Support”."""
+Setting Your ScreenName:
+
+- Compose a new CORRLINKS message to a ConTXT friend account.
+    Subject line: Set ScreenName [SCREENNAME] [AGE] [SEX]
+    Example: Set ScreenName DaffyD 31 M
+
+Updating Your ScreenName:
+
+- Compose a new CORRLINKS message to a ConTXT friend account.
+    Subject line: Update ScreenName [SCREENNAME] [AGE] [SEX]
+    Example: Update ScreenName DaffyD 32 M
+
+Managing Your PenPal Visibility:
+
+    To hide from the PenPal list: Subject line: Private
+    To appear on the PenPal list: Subject line: Public
+
+SENDING MESSAGES
+
+Sending a Text to a Number:
+
+- Compose a new CORRLINKS message to a ConTXT friend account.
+    Subject line: [10-DIGIT NUMBER]
+    Example: 5559996666
+    Type your message in the body.
+
+Messaging a Contact:
+
+- Compose a new CORRLINKS message to a ConTXT friend account.
+    Subject line: Text [CONTACT]
+    Example: Text BugsB
+    Type your message in the body.
+
+Messaging a PenPal:
+
+- Compose a new CORRLINKS message to a ConTXT friend account.
+    Subject line: PenPal [SCREENNAME]
+    Example: PenPal DaffyD
+    Type your message in the body.
+
+SUBSCRIPTION INFORMATION
+
+Your ConTXT basic account costs $14.99 per month and includes your own cell number. This allows people on the outside to message you without you having to initiate the conversation first.
+
+NEED HELP?
+
+If you need assistance, please contact our support team:
+
+    Email: {bot_account}
+    Subject line: Support
+
+Thank you for choosing ConTXT. We’re committed to keeping you connected with your loved ones.
+
+Best regards,
+The ConTXT Team"""
     },
 
     'SIGNUP_INSTRUCTIONS': {
